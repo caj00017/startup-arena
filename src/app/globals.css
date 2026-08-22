@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f8fc;
+  --foreground: #0b1220;
+  --paper: #ffffff;
+  --line: #cbd5e1;
+  --muted: #5c6778;
+  --brand: #1677ff;
+  --brand-soft: #ddebff;
+  --brand-deep: #0756c7;
+  --accent: #0756c7;
+  --accent-dark: #063e91;
+  --signal: #ef5b4c;
+  --arena-dark: #082b66;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(22, 119, 255, 0.28), transparent 32rem),
+    radial-gradient(circle at 100% 35%, rgba(22, 119, 255, 0.1), transparent 26rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--brand);
+  color: var(--foreground);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  outline-color: var(--accent);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.paper-grid {
+  background-color: rgba(221, 235, 255, 0.4);
+  background-image:
+    linear-gradient(rgba(7, 86, 199, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7, 86, 199, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.shadow-hard {
+  box-shadow: 5px 5px 0 var(--foreground);
+}
+
+.shadow-hard-sm {
+  box-shadow: 3px 3px 0 var(--foreground);
+}
+
+.card-lift {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.card-lift:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--foreground);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.78); }
+}
+
+.live-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}

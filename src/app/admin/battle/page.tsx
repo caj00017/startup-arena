@@ -1,0 +1,9 @@
+import { InitialBattleControl, PauseControl, RolloverControl } from "@/components/admin-controls";
+import { StatusPill } from "@/components/ui";
+import { getAdminData } from "@/db/queries";
+
+export const dynamic = "force-dynamic";
+export default async function AdminBattlePage() {
+  const data = await getAdminData();
+  return <section><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-black">Battle state</h2><p className="mt-2 text-sm text-[var(--muted)]">The transition runner only processes auctions and battles whose deadlines have passed. It is safe to retry.</p></div><RolloverControl /></div>{data.battles.length === 0 && <InitialBattleControl startups={data.approvedStartups} />}<div className="mt-6 grid gap-4">{data.battles.map((battle) => <article key={battle.id} className="rounded-2xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-5 shadow-hard-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><StatusPill tone={battle.status === "live" ? "live" : "neutral"}>{battle.status}</StatusPill><PauseControl kind="battle" id={battle.id} status={battle.status} /></div><a href={`/battle/${battle.id}`} className="text-sm font-black underline">Open battle</a></div><dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3"><div><dt className="text-[var(--muted)]">Starts</dt><dd className="mt-1 font-bold">{battle.startsAt.toISOString()}</dd></div><div><dt className="text-[var(--muted)]">Ends</dt><dd className="mt-1 font-bold">{battle.endsAt.toISOString()}</dd></div><div><dt className="text-[var(--muted)]">Streak entering</dt><dd className="mt-1 font-bold">{battle.championStreakAtStart}</dd></div></dl></article>)}</div></section>;
+}
