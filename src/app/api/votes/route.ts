@@ -11,7 +11,7 @@ import { castVote, VoteError } from "@/services/voting";
 const schema = z.object({
   battleId: z.string().uuid(),
   startupId: z.string().uuid(),
-  turnstileToken: z.string().optional()
+  turnstileToken: z.string().max(2_048).optional()
 });
 
 export async function POST(request: Request) {

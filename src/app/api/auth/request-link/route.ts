@@ -11,7 +11,7 @@ import { assertSameOrigin, verifyTurnstile } from "@/lib/security";
 const schema = z.object({
   email: z.string().email().max(254),
   next: z.string().max(300).default("/"),
-  turnstileToken: z.string().optional()
+  turnstileToken: z.string().max(2_048).optional()
 });
 
 export async function POST(request: Request) {

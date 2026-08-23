@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { Mail, ArrowRight } from "lucide-react";
 import { Button, Field, inputClass } from "./ui";
+import { Turnstile } from "./turnstile";
 
-export function SignInForm({ next = "/" }: { next?: string }) {
+export function SignInForm({ next = "/", turnstileSiteKey }: { next?: string; turnstileSiteKey?: string }) {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [devUrl, setDevUrl] = useState("");
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -18,12 +21,13 @@ export function SignInForm({ next = "/" }: { next?: string }) {
     const response = await fetch("/api/auth/request-link", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, next })
+      body: JSON.stringify({ email, next, turnstileToken: turnstileToken || undefined })
     });
     const result = (await response.json()) as { message?: string; devUrl?: string; error?: string };
     setPending(false);
     if (!response.ok) {
       setError(result.error || "Sign-in link could not be created.");
+      if (turnstileSiteKey) setTurnstileReset((value) => value + 1);
       return;
     }
     setMessage(result.message || "Check your inbox.");
@@ -46,7 +50,8 @@ export function SignInForm({ next = "/" }: { next?: string }) {
           />
         </div>
       </Field>
-      <Button type="submit" disabled={pending} className="w-full">
+      <Turnstile siteKey={turnstileSiteKey} onToken={setTurnstileToken} resetKey={turnstileReset} />
+      <Button type="submit" disabled={pending || Boolean(turnstileSiteKey && !turnstileToken)} className="w-full">
         {pending ? "Sending…" : <>Send sign-in link <ArrowRight size={17} /></>}
       </Button>
       {message && <p className="rounded-xl bg-[var(--brand-soft)] p-4 text-sm font-bold">{message}</p>}

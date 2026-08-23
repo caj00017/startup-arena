@@ -3,6 +3,7 @@ import { BattleArena } from "@/components/battle-arena";
 import { StatusPill } from "@/components/ui";
 import { getBattleData } from "@/db/queries";
 import { getCurrentUser } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
         initialVoteStartupId={data.userVote?.startupId}
         signedIn={Boolean(user)}
         isLive={live}
+        turnstileSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { ImpressionTracker } from "@/components/impression-tracker";
 import { StatusPill } from "@/components/ui";
 import { getAccountData, getActiveBattleData } from "@/db/queries";
 import { getCurrentUser } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function Home() {
           initialVoteStartupId={data.userVote?.startupId}
           signedIn={Boolean(user)}
           isLive={isLive}
+          turnstileSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
         />
 
         {data.auction && (
@@ -72,6 +74,7 @@ export default async function Home() {
               startups={account?.startups ?? []}
               signedIn={Boolean(user)}
               paymentVerified={Boolean(user?.paymentMethodVerifiedAt)}
+              maximumBidCents={env.MAX_BID_CENTS}
             />
           </div>
         )}

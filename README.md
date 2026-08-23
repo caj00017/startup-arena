@@ -98,13 +98,15 @@ Copy `.env.example` to `.env.local` for local overrides. A production deployment
 
 - `NEXT_PUBLIC_APP_URL`
 - `DATABASE_URL` pointing to PostgreSQL
+- `DATABASE_URL_UNPOOLED` for migrations (the migration command prefers it over the pooled runtime URL)
 - unique `SESSION_SECRET`, `CRON_SECRET`, and `IP_HASH_SECRET`
 - `ADMIN_EMAILS`
 - `RESEND_API_KEY` and a verified `EMAIL_FROM`
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and a Stripe webhook endpoint
-- Turnstile keys before accepting untrusted public traffic
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`
+- `MAX_BID_CENTS` set to the approved pilot ceiling (defaults to $250)
 
-Run migrations before the new deployment begins serving traffic. Schedule an authenticated request to `/api/cron/rollover` at least every five minutes. The daily rules use UTC; the auction closes one hour before its associated battle.
+Run migrations before the new deployment begins serving traffic. `vercel.json` schedules an authenticated Vercel Cron request to `/api/cron/rollover` every five minutes; set `CRON_SECRET` in the project environment so Vercel can authorize it. The daily rules use UTC; the auction closes one hour before its associated battle.
 
 For a fresh production database, sign in with an address in `ADMIN_EMAILS`, submit and approve at least two startups, then use `/admin/battle` to launch immediately or schedule the first battle for the next midnight UTC.
 

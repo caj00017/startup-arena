@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { StartupMark } from "@/components/startup-mark";
 import { StatusPill } from "@/components/ui";
 import { getStartupProfile } from "@/db/queries";
+import { isPublicStartupStatus } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
 export default async function StartupPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const data = await getStartupProfile(slug);
-  if (!data || data.startup.status === "suspended") notFound();
+  if (!data || !isPublicStartupStatus(data.startup.status)) notFound();
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-14 sm:py-20">

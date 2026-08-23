@@ -3,6 +3,7 @@ import {
   determineBattleWinner,
   isAuctionOpen,
   isBattleLive,
+  isPublicStartupStatus,
   validateBidAmount
 } from "@/lib/domain";
 
@@ -96,5 +97,26 @@ describe("auction rules", () => {
         new Date("2026-08-21T12:00:00Z")
       )
     ).toBe(true);
+  });
+
+  it("enforces the configured pilot bid cap", () => {
+    expect(
+      validateBidAmount({
+        amountCents: 25_001,
+        minimumBidCents: 500,
+        minimumIncrementCents: 100,
+        currentHighestBidCents: null,
+        maximumBidCents: 25_000
+      })
+    ).toMatchObject({ valid: false });
+  });
+});
+
+describe("startup visibility", () => {
+  it("only exposes approved startups publicly", () => {
+    expect(isPublicStartupStatus("approved")).toBe(true);
+    expect(isPublicStartupStatus("pending")).toBe(false);
+    expect(isPublicStartupStatus("rejected")).toBe(false);
+    expect(isPublicStartupStatus("suspended")).toBe(false);
   });
 });

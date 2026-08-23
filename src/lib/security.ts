@@ -43,14 +43,21 @@ export async function assertSameOrigin(request: Request) {
 }
 
 export async function verifyTurnstile(token?: string | null) {
+  assertProductionSecrets();
   if (!env.TURNSTILE_SECRET_KEY) return true;
   if (!token) return false;
 
-  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY, response: token })
-  });
-  const result = (await response.json()) as { success?: boolean };
-  return result.success === true;
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
+      signal: AbortSignal.timeout(5_000)
+    });
+    if (!response.ok) return false;
+    const result = (await response.json()) as { success?: boolean };
+    return result.success === true;
+  } catch {
+    return false;
+  }
 }

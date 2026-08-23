@@ -15,7 +15,8 @@ export function AuctionPanel({
   publicBids,
   startups,
   signedIn,
-  paymentVerified
+  paymentVerified,
+  maximumBidCents
 }: {
   auction: {
     id: string;
@@ -28,6 +29,7 @@ export function AuctionPanel({
   startups: AuctionStartup[];
   signedIn: boolean;
   paymentVerified: boolean;
+  maximumBidCents: number;
 }) {
   const router = useRouter();
   const topBid = publicBids[0]?.amountCents ?? null;
@@ -40,6 +42,7 @@ export function AuctionPanel({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const isOpen = auction.status === "open" && new Date(auction.closesAt) > new Date();
+  const capReached = minimum > maximumBidCents;
   const eligible = useMemo(() => startups.filter((item) => item.status === "approved"), [startups]);
 
   async function placeBid() {
@@ -101,6 +104,8 @@ export function AuctionPanel({
               <Button onClick={setupPayment} disabled={pending} className="w-fit bg-[var(--brand)] text-white shadow-[3px_3px_0_var(--accent)]">
                 <CreditCard size={17} /> Verify payment method
               </Button>
+            ) : isOpen && capReached ? (
+              <p className="font-bold text-white/70">This auction has reached the {formatMoney(maximumBidCents)} pilot bid cap.</p>
             ) : isOpen ? (
               <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
                 <select value={startupId} onChange={(event) => setStartupId(event.target.value)} className={`${inputClass} border-white/20 bg-white text-[var(--foreground)]`}>
@@ -111,6 +116,7 @@ export function AuctionPanel({
                   <input
                     type="number"
                     min={minimum / 100}
+                    max={maximumBidCents / 100}
                     step={auction.minimumIncrementCents / 100}
                     value={amount}
                     onChange={(event) => setAmount(event.target.value)}
@@ -125,7 +131,7 @@ export function AuctionPanel({
             ) : (
               <p className="font-bold text-white/70">This auction is settling. The next one opens with tomorrow’s battle.</p>
             )}
-            {isOpen && <p className="text-xs font-bold text-white/55">Minimum valid bid: {formatMoney(minimum)}. Winner pays their bid after the auction closes.</p>}
+            {isOpen && !capReached && <p className="text-xs font-bold text-white/55">Minimum valid bid: {formatMoney(minimum)}. Pilot maximum: {formatMoney(maximumBidCents)}. Winner pays their bid after the auction closes.</p>}
             {error && <p role="alert" className="text-sm font-bold text-[#ffb5a1]">{error}</p>}
             {success && <p className="text-sm font-bold text-[#8fc2ff]">{success}</p>}
           </div>

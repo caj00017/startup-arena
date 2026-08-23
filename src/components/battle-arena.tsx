@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, StatusPill } from "./ui";
 import { StartupMark } from "./startup-mark";
 import { percentage } from "@/lib/utils";
+import { Turnstile } from "./turnstile";
 
 type StartupCardData = {
   id: string;
@@ -23,7 +24,8 @@ export function BattleArena({
   initialChallengerVotes,
   initialVoteStartupId,
   signedIn,
-  isLive
+  isLive,
+  turnstileSiteKey
 }: {
   battleId: string;
   champion: StartupCardData;
@@ -33,6 +35,7 @@ export function BattleArena({
   initialVoteStartupId?: string | null;
   signedIn: boolean;
   isLive: boolean;
+  turnstileSiteKey?: string;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState(initialVoteStartupId || null);
@@ -40,6 +43,8 @@ export function BattleArena({
   const [challengerVotes, setChallengerVotes] = useState(initialChallengerVotes);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   async function vote(startupId: string) {
     if (!signedIn) {
@@ -53,7 +58,7 @@ export function BattleArena({
     const response = await fetch("/api/votes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ battleId, startupId })
+      body: JSON.stringify({ battleId, startupId, turnstileToken: turnstileToken || undefined })
     });
     const result = (await response.json()) as {
       error?: string;
@@ -63,6 +68,7 @@ export function BattleArena({
     setPending(null);
     if (!response.ok) {
       setError(result.error || "Your vote could not be recorded.");
+      if (turnstileSiteKey) setTurnstileReset((value) => value + 1);
       return;
     }
     setSelected(startupId);
@@ -75,6 +81,7 @@ export function BattleArena({
   const showResults = Boolean(selected) || !isLive;
   const championPercent = percentage(championVotes, total);
   const challengerPercent = total === 0 ? 50 : 100 - championPercent;
+  const waitingForVerification = Boolean(signedIn && turnstileSiteKey && !turnstileToken);
 
   return (
     <section aria-labelledby="battle-heading">
@@ -86,7 +93,7 @@ export function BattleArena({
           side="champion"
           selected={selected === champion.id}
           pending={pending === champion.id}
-          disabled={Boolean(selected) || !isLive}
+          disabled={Boolean(selected) || !isLive || waitingForVerification}
           onVote={() => vote(champion.id)}
           battleId={battleId}
         />
@@ -104,11 +111,17 @@ export function BattleArena({
           side="challenger"
           selected={selected === challenger.id}
           pending={pending === challenger.id}
-          disabled={Boolean(selected) || !isLive}
+          disabled={Boolean(selected) || !isLive || waitingForVerification}
           onVote={() => vote(challenger.id)}
           battleId={battleId}
         />
       </div>
+
+      {signedIn && isLive && !selected && (
+        <div className="mt-5 flex justify-center">
+          <Turnstile siteKey={turnstileSiteKey} onToken={setTurnstileToken} resetKey={turnstileReset} />
+        </div>
+      )}
 
       <div className="mt-6 rounded-2xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-4 shadow-hard-sm sm:p-5">
         {showResults ? (

@@ -4,11 +4,12 @@ import { db } from "@/db";
 import { events, startups } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getRequestFingerprint } from "@/lib/security";
+import { isPublicStartupStatus } from "@/lib/domain";
 
 export async function GET(request: Request, { params }: { params: Promise<{ startupId: string }> }) {
   const { startupId } = await params;
   const [startup] = await db.select().from(startups).where(eq(startups.id, startupId)).limit(1);
-  if (!startup || startup.status === "suspended" || startup.status === "rejected") {
+  if (!startup || !isPublicStartupStatus(startup.status)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

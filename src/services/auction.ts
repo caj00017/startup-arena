@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLogs, auctions, battles, bids, startups, users } from "@/db/schema";
 import { isAuctionOpen, validateBidAmount } from "@/lib/domain";
+import { env } from "@/lib/env";
 
 export class AuctionError extends Error {}
 
@@ -62,7 +63,8 @@ export async function placeBid(input: {
       amountCents: input.amountCents,
       minimumBidCents: auctionRow.auction.minimumBidCents,
       minimumIncrementCents: auctionRow.auction.minimumIncrementCents,
-      currentHighestBidCents: highest?.amountCents ?? null
+      currentHighestBidCents: highest?.amountCents ?? null,
+      maximumBidCents: env.MAX_BID_CENTS
     });
     if (!validation.valid) throw new AuctionError(validation.reason);
 

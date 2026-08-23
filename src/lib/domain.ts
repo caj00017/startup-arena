@@ -16,6 +16,7 @@ export function validateBidAmount(input: {
   minimumBidCents: number;
   minimumIncrementCents: number;
   currentHighestBidCents: number | null;
+  maximumBidCents?: number;
 }) {
   if (!Number.isSafeInteger(input.amountCents)) {
     return { valid: false as const, reason: "Bid must be a whole number of cents." };
@@ -29,7 +30,18 @@ export function validateBidAmount(input: {
     return { valid: false as const, reason: `Bid must be at least ${floor} cents.` };
   }
 
+  if (input.maximumBidCents !== undefined && input.amountCents > input.maximumBidCents) {
+    return {
+      valid: false as const,
+      reason: `Bid cannot exceed ${input.maximumBidCents} cents during the pilot.`
+    };
+  }
+
   return { valid: true as const, minimumAcceptedCents: floor };
+}
+
+export function isPublicStartupStatus(status: string) {
+  return status === "approved";
 }
 
 export function isBattleLive(

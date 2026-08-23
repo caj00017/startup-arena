@@ -16,7 +16,7 @@ const schema = z.object({
   demoUrl: optionalUrl,
   founderSocialUrl: optionalUrl,
   safetyConfirmed: z.literal(true),
-  turnstileToken: z.string().optional()
+  turnstileToken: z.string().max(2_048).optional()
 });
 
 export async function POST(request: Request) {

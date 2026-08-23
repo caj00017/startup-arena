@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonError, unauthorized } from "@/lib/http";
+import { env } from "@/lib/env";
 import { assertSameOrigin } from "@/lib/security";
 import { AuctionError, placeBid } from "@/services/auction";
 
 const schema = z.object({
   auctionId: z.string().uuid(),
   startupId: z.string().uuid(),
-  amountCents: z.number().int().min(100).max(99_999_900)
+  amountCents: z.number().int().min(100).max(env.MAX_BID_CENTS)
 });
 
 export async function POST(request: Request) {

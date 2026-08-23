@@ -12,8 +12,9 @@ config({ path: ".env.local" });
 config();
 
 async function run() {
-  if (process.env.DATABASE_URL) {
-    const client = postgres(process.env.DATABASE_URL, { max: 1 });
+  const migrationUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+  if (migrationUrl) {
+    const client = postgres(migrationUrl, { max: 1 });
     const database = drizzlePostgres(client);
     await migratePostgres(database, { migrationsFolder: "drizzle" });
     await client.end();

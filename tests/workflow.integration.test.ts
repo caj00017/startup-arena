@@ -2,10 +2,11 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { auctions, battles, bids, startups, users, votes } from "@/db/schema";
+import { auditLogs, auctions, battles, bids, magicLinks, sessions, startups, users, votes } from "@/db/schema";
+import { issueMagicLink, redeemMagicLinkToken } from "@/lib/auth";
 import { placeBid } from "@/services/auction";
 import { createInitialBattle, setAuctionPaused, setBattlePaused } from "@/services/admin";
-import { ensureNextBattle, finalizeBattle, settleAuction } from "@/services/rollover";
+import { ensureNextBattle, finalizeBattle, runScheduledTransitions, settleAuction } from "@/services/rollover";
 import { castVote } from "@/services/voting";
 
 const ids = {
@@ -91,5 +92,63 @@ describe("core v0.1 workflow", () => {
     expect((await setBattlePaused({ battleId: initial.battle.id, action: "pause", adminUserId: ids.championOwner })).status).toBe("paused");
     expect((await setBattlePaused({ battleId: initial.battle.id, action: "resume", adminUserId: ids.championOwner })).status).toBe("live");
     expect((await setAuctionPaused({ auctionId: initial.auction.id, action: "pause", adminUserId: ids.championOwner })).status).toBe("paused");
+  });
+
+  it("recovers a finalized battle after its missing wildcard is corrected", async () => {
+    const now = new Date();
+    await db
+      .update(auctions)
+      .set({ closesAt: new Date(now.getTime() - 2_000), wildcardStartupId: null })
+      .where(eq(auctions.id, ids.auction));
+    await db
+      .update(battles)
+      .set({ endsAt: new Date(now.getTime() - 1_000) })
+      .where(eq(battles.id, ids.battle));
+
+    const firstRun = await runScheduledTransitions(now);
+    expect(firstRun.battles[0]?.next.requiresWildcard).toBe(true);
+    expect((await db.select().from(battles).where(eq(battles.previousBattleId, ids.battle)))).toHaveLength(0);
+
+    await db
+      .update(auctions)
+      .set({ wildcardStartupId: ids.fallback })
+      .where(eq(auctions.id, ids.auction));
+    await runScheduledTransitions(new Date(now.getTime() + 1_000));
+
+    const [nextBattle] = await db
+      .select()
+      .from(battles)
+      .where(eq(battles.previousBattleId, ids.battle));
+    expect(nextBattle.challengerStartupId).toBe(ids.fallback);
+  });
+
+  it("serializes overlapping attempts to create the next battle", async () => {
+    await db.update(auctions).set({ status: "no_bid" }).where(eq(auctions.id, ids.auction));
+    await db
+      .update(battles)
+      .set({ status: "finalized", winnerStartupId: ids.champion, finalizedAt: new Date() })
+      .where(eq(battles.id, ids.battle));
+
+    await Promise.all([ensureNextBattle(ids.battle), ensureNextBattle(ids.battle)]);
+
+    expect(await db.select().from(battles).where(eq(battles.previousBattleId, ids.battle))).toHaveLength(1);
+    const createdAudits = await db.select().from(auditLogs).where(eq(auditLogs.action, "battle.created"));
+    expect(createdAudits).toHaveLength(1);
+  });
+
+  it("atomically consumes a magic link only once", async () => {
+    const magic = await issueMagicLink("atomic@example.com");
+    const token = new URL(magic.verifyUrl).searchParams.get("token");
+    expect(token).toBeTruthy();
+
+    const results = await Promise.all([
+      redeemMagicLinkToken(token!),
+      redeemMagicLinkToken(token!)
+    ]);
+
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(await db.select().from(sessions)).toHaveLength(1);
+    const [link] = await db.select().from(magicLinks);
+    expect(link.consumedAt).toBeInstanceOf(Date);
   });
 });

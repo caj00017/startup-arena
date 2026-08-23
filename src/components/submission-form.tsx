@@ -4,12 +4,15 @@ import { useState } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button, Field, inputClass } from "./ui";
+import { Turnstile } from "./turnstile";
 
-export function SubmissionForm() {
+export function SubmissionForm({ turnstileSiteKey }: { turnstileSiteKey?: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,13 +30,15 @@ export function SubmissionForm() {
         logoUrl: form.get("logoUrl") || undefined,
         screenshotUrl: form.get("screenshotUrl") || undefined,
         founderSocialUrl: form.get("founderSocialUrl") || undefined,
-        safetyConfirmed: form.get("safetyConfirmed") === "on"
+        safetyConfirmed: form.get("safetyConfirmed") === "on",
+        turnstileToken: turnstileToken || undefined
       })
     });
     const result = (await response.json()) as { error?: string };
     setPending(false);
     if (!response.ok) {
       setError(result.error || "Submission could not be saved.");
+      if (turnstileSiteKey) setTurnstileReset((value) => value + 1);
       return;
     }
     setSubmitted(true);
@@ -74,7 +79,8 @@ export function SubmissionForm() {
         <input name="safetyConfirmed" type="checkbox" required className="mt-1 size-4 accent-[var(--brand-deep)]" />
         <span>I confirm this product is functional, legal to promote, and safe for visitors to open.</span>
       </label>
-      <Button type="submit" disabled={pending} className="sm:w-fit">{pending ? "Submitting…" : <>Submit for review <ArrowRight size={17} /></>}</Button>
+      <Turnstile siteKey={turnstileSiteKey} onToken={setTurnstileToken} resetKey={turnstileReset} />
+      <Button type="submit" disabled={pending || Boolean(turnstileSiteKey && !turnstileToken)} className="sm:w-fit">{pending ? "Submitting…" : <>Submit for review <ArrowRight size={17} /></>}</Button>
       {error && <p role="alert" className="text-sm font-bold text-red-700">{error}</p>}
     </form>
   );

@@ -1,7 +1,9 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
-  console.warn("DATABASE_URL is not set. `db:generate` works, but drizzle-kit database commands require PostgreSQL.");
+const migrationUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+
+if (!migrationUrl) {
+  console.warn("DATABASE_URL_UNPOOLED or DATABASE_URL is not set. `db:generate` works, but drizzle-kit database commands require PostgreSQL.");
 }
 
 export default defineConfig({
@@ -9,7 +11,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/startup_arena"
+    url: migrationUrl || "postgres://postgres:postgres@localhost:5432/startup_arena"
   },
   strict: true,
   verbose: true

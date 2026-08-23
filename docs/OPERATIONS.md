@@ -5,7 +5,7 @@
 Human-owned accounts and decisions are intentionally not automated. Before a public production launch, the operator must provide:
 
 1. A hosting project and production domain.
-2. A managed PostgreSQL database and `DATABASE_URL`.
+2. A managed PostgreSQL database with pooled `DATABASE_URL` and unpooled `DATABASE_URL_UNPOOLED` connections.
 3. A Stripe account capable of accepting payments in the intended jurisdiction.
 4. A Resend account, verified sender/domain, and API key.
 5. Cloudflare Turnstile keys.
@@ -21,7 +21,7 @@ On a fresh production database, an email listed in `ADMIN_EMAILS` automatically 
 
 ## Database deployment
 
-Set `DATABASE_URL`, then run:
+Set `DATABASE_URL_UNPOOLED` (preferred) and `DATABASE_URL` (fallback), then run:
 
 ```bash
 npm run db:migrate
@@ -29,7 +29,7 @@ npm run db:migrate
 
 Do not run the demo seed against production. Production participants should be submitted and reviewed through the application.
 
-The application refuses to use embedded PGlite when `NODE_ENV=production`.
+The application refuses to use embedded PGlite when `NODE_ENV=production`. Runtime traffic always uses the pooled `DATABASE_URL`; only migration tooling prefers the unpooled URL.
 
 ## Authentication and email
 
@@ -69,7 +69,7 @@ GET /api/cron/rollover
 Authorization: Bearer <CRON_SECRET>
 ```
 
-The route is safe to retry. The planned daily schedule is:
+`vercel.json` configures this five-minute request for Vercel deployments. The route is safe to retry, and overlapping invocations use renewable transition leases plus row serialization. The planned daily schedule is:
 
 - 00:00 UTC — battle and auction open;
 - 23:00 UTC — auction closes and settlement begins;
@@ -95,7 +95,7 @@ Open `/admin/battle` and run due transitions. Stripe uses the bid ID as the idem
 
 ### No payable winner
 
-The auction moves to `no_bid`. Set or correct its wildcard in `/admin/auction`, then run due transitions again.
+The auction moves to `no_bid`. Set or correct its wildcard in `/admin/auction`, then run due transitions again. Finalized battles without a successor remain recoverable and are retried automatically by cron.
 
 ### Battle did not finalize
 

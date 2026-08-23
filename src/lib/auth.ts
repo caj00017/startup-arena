@@ -2,7 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { magicLinks, sessions, users, type User } from "@/db/schema";
+import { magicLinks, sessions, startups, users, type User } from "@/db/schema";
 import { adminEmails, assertProductionSecrets, env } from "./env";
 import { hashToken, randomToken } from "./security";
 
@@ -11,6 +11,7 @@ const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 
 export async function getCurrentUser(): Promise<User | null> {
   const token = (await cookies()).get(sessionCookie)?.value;
+  assertProductionSecrets();
   if (!token) return null;
 
   const [result] = await db
@@ -20,7 +21,34 @@ export async function getCurrentUser(): Promise<User | null> {
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
     .limit(1);
 
-  return result?.user ?? null;
+  return result?.user ? reconcileConfiguredRole(result.user) : null;
+}
+
+export function resolveConfiguredRole(input: {
+  email: string;
+  currentRole: User["role"];
+  ownsStartup: boolean;
+}) {
+  if (adminEmails.has(input.email.trim().toLowerCase())) return "admin" as const;
+  if (input.currentRole !== "admin") return input.currentRole;
+  return input.ownsStartup ? ("founder" as const) : ("voter" as const);
+}
+
+async function reconcileConfiguredRole(user: User) {
+  const needsOwnershipCheck = user.role === "admin" && !adminEmails.has(user.email);
+  const [ownedStartup] = needsOwnershipCheck
+    ? await db.select({ id: startups.id }).from(startups).where(eq(startups.ownerId, user.id)).limit(1)
+    : [];
+  const role = resolveConfiguredRole({
+    email: user.email,
+    currentRole: user.role,
+    ownsStartup: Boolean(ownedStartup)
+  });
+
+  if (role === user.role) return user;
+  const now = new Date();
+  await db.update(users).set({ role, updatedAt: now }).where(eq(users.id, user.id));
+  return { ...user, role, updatedAt: now };
 }
 
 export async function requireUser() {
@@ -49,45 +77,10 @@ export async function issueMagicLink(emailValue: string, next = "/") {
 }
 
 export async function consumeMagicLink(token: string) {
-  const tokenHash = hashToken(token);
-  const [link] = await db
-    .select()
-    .from(magicLinks)
-    .where(
-      and(
-        eq(magicLinks.tokenHash, tokenHash),
-        isNull(magicLinks.consumedAt),
-        gt(magicLinks.expiresAt, new Date())
-      )
-    )
-    .limit(1);
+  const result = await redeemMagicLinkToken(token);
+  if (!result) return null;
 
-  if (!link) return null;
-
-  const [existingUser] = await db.select().from(users).where(eq(users.email, link.email)).limit(1);
-  const role = adminEmails.has(link.email) ? "admin" : existingUser?.role || "voter";
-
-  const [user] = existingUser
-    ? await db
-        .update(users)
-        .set({ emailVerifiedAt: new Date(), role, updatedAt: new Date() })
-        .where(eq(users.id, existingUser.id))
-        .returning()
-    : await db
-        .insert(users)
-        .values({ email: link.email, role, emailVerifiedAt: new Date() })
-        .returning();
-
-  await db.update(magicLinks).set({ consumedAt: new Date() }).where(eq(magicLinks.id, link.id));
-
-  const sessionToken = randomToken();
-  await db.insert(sessions).values({
-    userId: user.id,
-    tokenHash: hashToken(sessionToken),
-    expiresAt: new Date(Date.now() + sessionDurationMs)
-  });
-
-  (await cookies()).set(sessionCookie, sessionToken, {
+  (await cookies()).set(sessionCookie, result.sessionToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: env.NODE_ENV === "production",
@@ -95,7 +88,67 @@ export async function consumeMagicLink(token: string) {
     maxAge: sessionDurationMs / 1000
   });
 
-  return user;
+  return result.user;
+}
+
+export async function redeemMagicLinkToken(token: string) {
+  const tokenHash = hashToken(token);
+  const now = new Date();
+
+  return db.transaction(async (tx) => {
+    const [link] = await tx
+      .update(magicLinks)
+      .set({ consumedAt: now })
+      .where(
+        and(
+          eq(magicLinks.tokenHash, tokenHash),
+          isNull(magicLinks.consumedAt),
+          gt(magicLinks.expiresAt, now)
+        )
+      )
+      .returning();
+
+    if (!link) return null;
+
+    const [existingUser] = await tx.select().from(users).where(eq(users.email, link.email)).limit(1);
+    const needsOwnershipCheck = existingUser?.role === "admin" && !adminEmails.has(link.email);
+    const [ownedStartup] = existingUser && needsOwnershipCheck
+      ? await tx
+          .select({ id: startups.id })
+          .from(startups)
+          .where(eq(startups.ownerId, existingUser.id))
+          .limit(1)
+      : [];
+    const role = existingUser
+      ? resolveConfiguredRole({
+          email: link.email,
+          currentRole: existingUser.role,
+          ownsStartup: Boolean(ownedStartup)
+        })
+      : adminEmails.has(link.email)
+        ? "admin"
+        : "voter";
+
+    const [user] = existingUser
+      ? await tx
+          .update(users)
+          .set({ emailVerifiedAt: now, role, updatedAt: now })
+          .where(eq(users.id, existingUser.id))
+          .returning()
+      : await tx
+          .insert(users)
+          .values({ email: link.email, role, emailVerifiedAt: now })
+          .returning();
+
+    const sessionToken = randomToken();
+    await tx.insert(sessions).values({
+      userId: user.id,
+      tokenHash: hashToken(sessionToken),
+      expiresAt: new Date(now.getTime() + sessionDurationMs)
+    });
+
+    return { user, sessionToken };
+  });
 }
 
 export async function clearSession() {

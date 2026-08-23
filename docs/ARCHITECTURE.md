@@ -68,7 +68,7 @@ The cron and admin retry paths call the same `runScheduledTransitions` service:
 5. Create the next battle's auction.
 6. Promote scheduled battles whose start time has arrived.
 
-Database uniqueness and Stripe idempotency protect retries. The admin interface exposes the same transition runner for recovery.
+Renewable database transition leases prevent overlapping workers from settling or finalizing the same record concurrently. Next-battle creation locks the finalized battle row and also has a unique `previous_battle_id` backstop. Stripe idempotency protects capture retries. Finalized battles without a successor are retried so an operator can correct a missing wildcard after finalization. The admin interface exposes the same transition runner for recovery.
 
 ## Authentication
 
@@ -88,7 +88,7 @@ Development uses a clearly identified mock adapter. Production refuses to verify
 - unique vote constraint per account and battle;
 - HMAC-hashed IP and hashed user agent;
 - maximum 25 votes from one IP hash in 24 hours;
-- optional Turnstile verification;
+- Turnstile verification in production for sign-in, voting, and startup submission;
 - admin vote review/invalidation;
 - startup approval before bidding;
 - same-origin checks on browser mutations;
