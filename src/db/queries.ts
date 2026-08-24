@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
 import { auctions, battles, bids, events, startups, users, votes } from "./schema";
+import { buildLeaderboard } from "@/lib/leaderboard";
 
 async function startupMap(ids: string[]) {
   if (ids.length === 0) return new Map();
@@ -106,6 +107,25 @@ export async function getBattleData(id: string, userId?: string) {
   };
 }
 
+export async function getLeaderboardData(now = new Date()) {
+  const battleRows = await db.select().from(battles).orderBy(asc(battles.startsAt));
+  const winnerIds = [
+    ...new Set(
+      battleRows.flatMap((battle) =>
+        battle.status === "finalized" && battle.winnerStartupId
+          ? [battle.winnerStartupId]
+          : []
+      )
+    )
+  ];
+  if (winnerIds.length === 0) return [];
+  const startupRows = await db
+    .select()
+    .from(startups)
+    .where(inArray(startups.id, winnerIds));
+  return buildLeaderboard(startupRows, battleRows, now);
+}
+
 export async function getStartupProfile(slug: string) {
   const [startup] = await db.select().from(startups).where(eq(startups.slug, slug)).limit(1);
   if (!startup) return null;
@@ -128,17 +148,17 @@ export async function getStartupProfile(slug: string) {
     )
   );
 
-  const [clickResult] = await db
-    .select({ total: count() })
-    .from(events)
-    .where(and(eq(events.startupId, startup.id), eq(events.eventType, "outbound_click")));
-
   const wins = battleRows.filter((battle) => battle.winnerStartupId === startup.id).length;
+  const leaderboardEntry = (await getLeaderboardData()).find(
+    (entry) => entry.startup.id === startup.id
+  );
   return {
     startup,
     wins,
     losses: battleRows.length - wins,
-    clicks: Number(clickResult?.total ?? 0),
+    crownTimeMs: leaderboardEntry?.crownTimeMs ?? 0,
+    longestStreak: leaderboardEntry?.longestStreak ?? 0,
+    isCurrentChampion: leaderboardEntry?.isCurrentChampion ?? false,
     battles: battleRows.map((battle) => ({
       battle,
       opponent: opponentRows.get(

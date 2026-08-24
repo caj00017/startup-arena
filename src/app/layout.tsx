@@ -27,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             Made by Nexura
           </a>
           <div className="flex flex-wrap justify-center gap-5 sm:justify-self-end">
+            <a className="hover:text-[var(--foreground)]" href="/leaderboard">Leaderboard</a>
             <a className="hover:text-[var(--foreground)]" href="/rules">Rules</a>
             <a className="hover:text-[var(--foreground)]" href="/about">About</a>
             <a className="hover:text-[var(--foreground)]" href="/privacy">Privacy</a>

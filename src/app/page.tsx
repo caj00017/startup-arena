@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Trophy } from "lucide-react";
 import { AuctionPanel } from "@/components/auction-panel";
 import { BattleArena } from "@/components/battle-arena";
 import { Countdown } from "@/components/countdown";
@@ -112,7 +112,7 @@ export default async function Home({
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--accent)]">The record</p>
               <h2 className="mt-2 font-display text-4xl font-black tracking-[-0.04em]">Recent battles</h2>
             </div>
-            <Link href="/rules" className="hidden items-center gap-2 text-sm font-black hover:text-[var(--accent)] sm:flex">How it works <ArrowRight size={16} /></Link>
+            <Link href="/leaderboard" className="hidden items-center gap-2 text-sm font-black hover:text-[var(--accent)] sm:flex">Leaderboard <Trophy size={16} /></Link>
           </div>
           <div className="mt-6 divide-y divide-[var(--line)] border-y border-[var(--line)]">
             {data.recentBattles.length ? data.recentBattles.map(({ battle, champion, challenger }) => {

@@ -16,6 +16,7 @@ export async function SiteHeader() {
           </span>
         </Link>
         <nav className="flex items-center gap-2 text-sm font-bold sm:gap-5">
+          <Link href="/leaderboard" className="hidden hover:text-[var(--accent)] md:block">Leaderboard</Link>
           <Link href="/rules" className="hidden hover:text-[var(--accent)] sm:block">Rules</Link>
           <Link href="/submit" className="hidden hover:text-[var(--accent)] sm:block">Submit</Link>
           {user?.role === "admin" && (

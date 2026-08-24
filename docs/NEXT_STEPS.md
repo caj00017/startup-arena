@@ -97,7 +97,28 @@ Unless stated otherwise, each battle report includes activity recorded from that
 | Operational interventions | Manual pause, moderation, fallback correction, or rollover recovery actions recorded for the battle |
 | Auction demand | Eligible bidders, valid bids, winning amount, payment result, and repeat bidding |
 
-The visitor identifier is random and first-party and is persisted server-side only as a keyed hash. It contains no email address, startup ID, raw IP address, or third-party advertising identifier. Chris must approve a raw-event retention and deletion policy before public traffic.
+The visitor identifier is random and first-party and is persisted server-side only as a keyed hash. It contains no email address, startup ID, raw IP address, or third-party advertising identifier. The 30-day raw-event working rule below must be reconciled with the final moderation, dispute, and legal policy before public traffic.
+
+### Leaderboard contract
+
+The public leaderboard contains every approved startup with at least one finalized battle win. It ranks startups by **crown time**: cumulative elapsed arena time serving as defending champion after an earned win.
+
+- Crown time is calculated from durable battle records, never visitor analytics.
+- The opening seed battle does not count as earned crown time. A winner begins accumulating time when it returns in the successor matchup with `championStreakAtStart` greater than zero.
+- Only elapsed, non-cancelled battle intervals count. A delayed successor starts at the later of its scheduled start and actual record creation, so downtime while no matchup exists is excluded.
+- A short operator pause does not reset a reign.
+- Ties are broken by total finalized wins, longest winning streak, earliest first win, and then startup name.
+- The public row shows rank, startup, crown time, total wins, best streak, and current-champion status.
+
+The leaderboard requires durable startup identity plus each battle's participant IDs, chain, scheduled interval, creation time, status, winner, final vote totals, streak-at-start, and finalization time. Those competition-ledger fields remain while Startup Arena operates and are not deleted with traffic analytics.
+
+### Raw analytics inventory and working retention rule
+
+The current raw `events` rows record event type, time, optional battle/startup/user references, a keyed anonymous visitor hash where relevant, and minimal source metadata. Event types currently used are battle impressions, founder shares, signed referral visits, outbound startup clicks, vote attribution, and startup submission. The separate `votes` table stores the voter and battle choice plus keyed IP/user-agent hashes for abuse review. Neither data set is needed to calculate the leaderboard.
+
+The working product rule is to retain raw traffic events for **30 days after a battle ends**, or 30 days after creation when an event has no battle, and then delete them automatically. The eight-day browser visitor token remains unchanged. Individual vote and abuse-review records need a separately documented moderation/dispute cutoff before they can be reduced to the final vote totals already frozen on the battle. Auction, payment, tax, dispute, and security-audit records follow their own legally reviewed schedules and are not governed by the analytics window.
+
+Before public launch, Codex must implement and rehearse the cleanup job, make report availability match the 30-day window, and update the privacy copy. The final policy remains subject to the approved launch geography and counsel review.
 
 ## 5. Chronological remaining work
 
@@ -124,11 +145,12 @@ The visitor identifier is random and first-party and is persisted server-side on
 
 **Codex**
 
-1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
-2. Validate production configuration without exposing values.
-3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
-4. Add retention/cleanup for expired sessions, magic links, and raw analytics after Chris approves the policy.
-5. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
+1. Deploy and reconcile the public crown-time leaderboard on staging.
+2. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
+3. Validate production configuration without exposing values.
+4. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
+5. Add retention/cleanup for expired sessions, magic links, and 30-day raw analytics after the remaining moderation/dispute policy is approved.
+6. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
 
 **Exit criteria**
 
@@ -136,6 +158,8 @@ The visitor identifier is random and first-party and is persisted server-side on
 - Preview and staging cannot access the production database.
 - Health and lifecycle alerts reach a real person.
 - Support ownership and escalation paths are documented.
+- The public leaderboard is derived entirely from durable competition records and remains correct after raw analytics deletion.
+- Automated cleanup removes expired authentication artifacts and raw analytics on schedule without changing battle outcomes or leaderboard rank.
 
 ### Phase C — Finish legal, policy, and trust gates
 
