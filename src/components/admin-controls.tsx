@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { summarizeTransitionResult } from "@/lib/transition-summary";
 import { Button } from "./ui";
 
-async function mutate(url: string, body?: object, method = "POST") {
+async function mutate<T = unknown>(url: string, body?: object, method = "POST") {
   const response = await fetch(url, {
     method,
     headers: { "content-type": "application/json" },
     body: body ? JSON.stringify(body) : undefined
   });
-  const result = (await response.json()) as { error?: string };
+  const result = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(result.error || "Admin action failed.");
+  return result;
 }
 
 export function StartupReviewControls({ startupId }: { startupId: string }) {
@@ -61,11 +64,20 @@ export function RolloverControl() {
   const [message, setMessage] = useState("");
   async function run() {
     setPending(true); setMessage("");
-    try { await mutate("/api/admin/rollover"); setMessage("Transitions checked successfully."); router.refresh(); }
+    try {
+      const response = await mutate<{
+        result?: {
+          auctions?: Array<{ status: string } | null>;
+          battles?: Array<{ next?: { requiresWildcard?: boolean } | null } | null>;
+        };
+      }>("/api/admin/rollover");
+      setMessage(summarizeTransitionResult(response.result));
+      router.refresh();
+    }
     catch (reason) { setMessage(reason instanceof Error ? reason.message : "Failed."); }
     finally { setPending(false); }
   }
-  return <div><Button onClick={run} disabled={pending}>{pending ? "Checking…" : "Run due transitions"}</Button>{message && <p className="mt-3 text-sm font-bold text-[var(--muted)]">{message}</p>}</div>;
+  return <div><Button onClick={run} disabled={pending}>{pending ? "Checking…" : "Run due transitions"}</Button>{message && <div className="mt-3 text-sm font-bold text-[var(--muted)]"><p aria-live="polite">{message}</p><Link href="/admin/auction" className="mt-1 inline-block underline">View auction state</Link></div>}</div>;
 }
 
 export function VoteModerationControls({ voteId }: { voteId: string }) {
