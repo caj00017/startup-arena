@@ -41,6 +41,15 @@ describe("production readiness", () => {
       ])
     );
   });
+
+  it("rejects a sender domain without a complete email address", () => {
+    const errors = getProductionConfigurationErrors({
+      ...configuredProduction,
+      EMAIL_FROM: "mail.startup-arena.test"
+    });
+
+    expect(errors).toContain("EMAIL_FROM must use a verified production sender");
+  });
 });
 
 describe("configured administrator access", () => {

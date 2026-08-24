@@ -27,6 +27,13 @@ function isPlaceholder(value: string) {
   return value.startsWith("development-") || value.includes("replace-with");
 }
 
+function hasValidSenderAddress(value: string) {
+  const trimmed = value.trim();
+  const namedSender = trimmed.match(/^[^<>]+<([^<>]+)>$/);
+  const address = (namedSender?.[1] ?? trimmed).trim();
+  return z.string().email().safeParse(address).success;
+}
+
 export function getProductionConfigurationErrors(current: Environment = env) {
   if (current.NODE_ENV !== "production") return [];
 
@@ -48,7 +55,11 @@ export function getProductionConfigurationErrors(current: Environment = env) {
     errors.push("ADMIN_EMAILS must contain the production administrator addresses");
   }
   if (!current.RESEND_API_KEY) errors.push("RESEND_API_KEY is required");
-  if (!current.EMAIL_FROM || current.EMAIL_FROM.includes("example.com")) {
+  if (
+    !current.EMAIL_FROM ||
+    current.EMAIL_FROM.includes("example.com") ||
+    !hasValidSenderAddress(current.EMAIL_FROM)
+  ) {
     errors.push("EMAIL_FROM must use a verified production sender");
   }
   if (!current.STRIPE_SECRET_KEY) errors.push("STRIPE_SECRET_KEY is required");
