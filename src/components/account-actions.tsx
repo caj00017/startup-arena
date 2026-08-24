@@ -37,7 +37,7 @@ export function AccountActions({ paymentVerified }: { paymentVerified: boolean }
   return (
     <div>
       <div className="flex flex-wrap gap-3">
-        {!paymentVerified && <Button onClick={setupPayment} disabled={pending}><CreditCard size={17} /> {pending ? "Opening…" : "Verify payment"}</Button>}
+        <Button onClick={setupPayment} disabled={pending}><CreditCard size={17} /> {pending ? "Opening…" : paymentVerified ? "Change payment method" : "Verify payment"}</Button>
         <Button onClick={signOut} className="bg-white text-[var(--foreground)] shadow-[3px_3px_0_var(--line)]"><LogOut size={17} /> Sign out</Button>
       </div>
       {error && <p role="alert" className="mt-3 max-w-sm text-sm font-bold text-red-700">{error}</p>}
