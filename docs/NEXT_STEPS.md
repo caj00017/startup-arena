@@ -1,6 +1,6 @@
 # Startup Arena — Paid-First Launch Plan
 
-**Status:** Staging reporting gate passed; production foundation is next
+**Status:** Staging reporting and leaderboard gates passed; production foundation is next
 
 **Last reconciled:** August 24, 2026
 
@@ -17,6 +17,8 @@ The launch-blocking application hardening and real staging lifecycle rehearsal a
 - automatic Vercel Cron rollover, overlapping transition requests, and settlement idempotency.
 
 Launch analytics and referral reporting are implemented, pushed on `main`, deployed, and reconciled on staging. The authenticated rehearsal moved unique visitors from 2 to 4, verified votes from 0 to 1, and explored-both visitors from 0 to 1. Each startup gained one outbound click, while the shared Bidder link gained one founder share, one unique referred visitor, and 100% referral vote conversion. Suspicious votes and operator interventions remained at zero. The extra two visitors are consistent with the signed-in owner opening the matchup to share it and a separate private visitor opening the referral.
+
+The public crown-time leaderboard is also implemented and deployed. Staging derives Arena Challenger Test as the current leader and champion with four finalized wins, and its public startup profile shows the same crown-time and streak evidence. The calculation uses only durable startup/battle records and is independent of raw analytics.
 
 The remaining launch sequence is:
 
@@ -145,12 +147,11 @@ Before public launch, Codex must implement and rehearse the cleanup job, make re
 
 **Codex**
 
-1. Deploy and reconcile the public crown-time leaderboard on staging.
-2. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
-3. Validate production configuration without exposing values.
-4. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
-5. Add retention/cleanup for expired sessions, magic links, and 30-day raw analytics after the remaining moderation/dispute policy is approved.
-6. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
+1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
+2. Validate production configuration without exposing values.
+3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
+4. Add retention/cleanup for expired sessions, magic links, and 30-day raw analytics after the remaining moderation/dispute policy is approved.
+5. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
 
 **Exit criteria**
 
