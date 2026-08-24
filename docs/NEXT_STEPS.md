@@ -1,14 +1,14 @@
-# Startup Arena — Launch Plan
+# Startup Arena — Paid-First Launch Plan
 
-**Status:** Staging lifecycle rehearsal complete; preparing the free public pilot
+**Status:** Staging lifecycle rehearsal complete; preparing a controlled paid launch
 
 **Last reconciled:** August 24, 2026
 
-**Objective:** Run a safe, measurable 5–7 battle free public pilot before making a separate decision about live payments.
+**Objective:** Open with one invited matchup and live paid bidding after the remaining production, legal, operational, and cohort gates pass. There is no separate multi-battle free pilot.
 
 ## 1. Current checkpoint
 
-The launch-blocking application hardening and real staging lifecycle rehearsal are complete. The current staging deployment has exercised:
+The launch-blocking application hardening and real staging lifecycle rehearsal are complete. Staging has exercised:
 
 - cross-device email authentication and Turnstile-protected mutations;
 - startup submission, moderation, voting, and public battle rendering;
@@ -16,31 +16,56 @@ The launch-blocking application hardening and real staging lifecycle rehearsal a
 - awarded, no-bid, wildcard, pause/resume, and operator-recovery paths;
 - automatic Vercel Cron rollover, overlapping transition requests, and settlement idempotency.
 
-The next milestone is not a paid launch. The remaining sequence is:
+Pilot analytics and referral reporting are implemented and pushed on `main` as `5e198dd`. Deployment of that commit to staging is pending restored Vercel CLI authorization.
+
+The remaining launch sequence is:
 
 ```text
-Pilot metrics and referral reporting
+Deploy and rehearse reporting on staging
         ↓
-Public-launch foundation, policies, and cohort
+Production domain, providers, monitoring, policies, and retention
         ↓
-Instrumented production rehearsal
+Approve Nexura plus the invited opening challenger
         ↓
-5–7 battle free public pilot
+Instrumented production rehearsal with Stripe test mode
         ↓
-Evidence review
+Explicit live-payment authorization and live Stripe cutover
         ↓
-Separate limited-paid-pilot decision
+Controlled paid launch
+        ↓
+Evidence review after the first 7–14 days
 ```
 
-No live payment should be accepted without Chris's explicit authorization after the free-pilot review. The production Neon resource must also be upgraded from Free to a suitable paid production plan before any public launch, including the free pilot.
+No live payment should be accepted until Chris explicitly authorizes it after the readiness review. The production Neon resource must be upgraded from Free to a suitable paid production plan before public traffic begins.
 
-## 2. Ownership
+## 2. Opening lineup and marketplace continuity
+
+### Opening matchup
+
+- **Champion:** Nexura — `https://nexura.fyi/`, owned by Chris.
+- **Challenger:** one startup submitted by an invited founder and approved through normal moderation.
+- **Day-one auction:** open to other approved, payment-verified founders using live Stripe after launch authorization.
+
+Nexura and the invited challenger receive their opening placements without winning a prior auction because the marketplace has no previous battle. Money buys subsequent challenger placement, not votes or the opening seed positions.
+
+### Day-two continuity requirement
+
+The two startups in the active battle cannot bid or serve as that battle's wildcard. Therefore, Nexura plus one invited challenger are sufficient to start day one, but they do not guarantee a valid day-two matchup.
+
+Before the first auction closes, one of the following must exist:
+
+1. an eligible paid bidder whose payment settles successfully; or
+2. a third, distinct approved startup configured as the wildcard fallback.
+
+For a dependable launch, configure the fallback before auction close rather than assuming an organic paid bid will arrive. The third startup does not necessarily require a third founder; it may be another legitimate approved product owned by Chris or the invited founder. Without a payable bid or eligible fallback, the system safely pauses after finalization until an operator supplies one.
+
+## 3. Ownership
 
 ### Codex owns
 
-- repository changes, migrations, tests, deployment configuration, and technical runbooks;
-- pilot analytics, referral attribution, and operator/founder reporting;
-- technical monitoring hooks and validation of production configuration;
+- repository changes, tests, deployment configuration, and technical runbooks;
+- analytics, referral attribution, and operator/founder reporting;
+- technical monitoring hooks and production configuration validation;
 - staging and production deployment verification;
 - translating approved legal and operational decisions into product copy and controls.
 
@@ -48,15 +73,16 @@ No live payment should be accepted without Chris's explicit authorization after 
 
 - domains, provider accounts, billing, DNS, and secret entry;
 - legal, tax, privacy, refund, dispute, and moderation policy decisions;
-- the support channel, alert destination, launch geography/currency, bid cap, and UTC rollover boundary;
-- startup recruitment, cohort selection, founder interviews, and daily pilot operations;
-- the final decisions to start public traffic and, separately, to enable live payments.
+- support and alert destinations, geography/currency, bid cap, and UTC rollover boundary;
+- submitting Nexura, inviting the opening challenger, and arranging a day-two fallback;
+- voter and bidder outreach, daily launch operations, and founder interviews;
+- the explicit authorization to enable live Stripe payments.
 
 Credentials belong only in provider-managed encrypted environment settings. They must not be pasted into chat, stored in Markdown, or committed to Git.
 
-## 3. Free-pilot measurement contract
+## 4. Launch measurement contract
 
-The free-pilot report must make the following metrics reproducible per battle. Unless stated otherwise, the report includes activity recorded from that battle's start through its end, so historical page visits cannot change a completed pilot result. Definitions are fixed here so implementation and launch review use the same denominators.
+Unless stated otherwise, each battle report includes activity recorded from that battle's start through its end, so historical page visits cannot change a completed result.
 
 | Metric | Definition |
 |---|---|
@@ -71,57 +97,34 @@ The free-pilot report must make the following metrics reproducible per battle. U
 | Referral vote conversion | Verified voters from a founder-attributed visit divided by unique referred visitors |
 | Invalid/suspicious vote rate | Votes marked `invalid` or `review`, divided by all battle votes |
 | Operational interventions | Manual pause, moderation, fallback correction, or rollover recovery actions recorded for the battle |
+| Auction demand | Eligible bidders, valid bids, winning amount, payment result, and repeat bidding |
 
-The visitor identifier must be random and first-party, and it must be persisted server-side only as a keyed hash. It must not contain an email address, startup ID, raw IP address, or third-party advertising identifier. Raw event retention and deletion are policy-dependent and are not finalized until Chris chooses the retention period.
+The visitor identifier is random and first-party and is persisted server-side only as a keyed hash. It contains no email address, startup ID, raw IP address, or third-party advertising identifier. Chris must approve a raw-event retention and deletion policy before public traffic.
 
-Founder interviews capture the evidence that instrumentation cannot:
+## 5. Chronological remaining work
 
-- traffic relevance and presentation fairness;
-- whether losing still delivered useful promotion;
-- founder satisfaction and willingness to participate again;
-- a concrete dollar value, if any, for a future challenger slot;
-- complaints, moderation burden, and useful downstream conversions founders voluntarily report.
-
-### Free-pilot decision signals
-
-The following are validation targets, not promises or substitutes for judgment:
-
-- at least five battles finish reliably;
-- both participants receive measurable outbound traffic in every battle;
-- approximately 100 independent verified voters per battle is the early audience target;
-- at least 10% seven-day visitor return is the early retention target;
-- at least 20% of participating founders actively share their battle;
-- at least two founders state a concrete willingness to pay;
-- suspicious voting and daily operations remain manageable without ad hoc database repair.
-
-Weak founder demand or audience retention stops the paid-pilot path even if the application is technically healthy.
-
-## 4. Chronological remaining work
-
-### Phase A — Build and validate pilot measurement
+### Phase A — Deploy and validate launch reporting
 
 **Codex**
 
-1. Replace IP-based impression counting with a random first-party anonymous visitor identifier while retaining the existing security fingerprint for abuse controls.
-2. Record battle impressions, startup outbound clicks, shares, and founder-attributed referral visits against the same visitor identifier.
-3. Add a per-battle admin report using the definitions in Section 3.
-4. Add useful founder-visible battle traffic totals without exposing other users or security signals.
-5. Add regression coverage for attribution, uniqueness, denominators, access control, and missing/invalid referral data.
-6. Deploy the migration and reporting changes to staging, then compare the rendered report with controlled test traffic.
+1. Deploy commit `5e198dd` to staging after Vercel CLI authorization is restored.
+2. Generate controlled staging impressions, a signed founder referral, a share, both startup clicks, and a verified vote.
+3. Reconcile the admin battle report and founder summary against the controlled traffic.
+4. Confirm founders see only their own aggregate delivery data and admins see battle-level operational evidence.
 
-**Chris, in parallel**
+**Chris**
 
-1. Choose a raw analytics retention period and deletion-request policy.
-2. Decide how the free pilot selects future challengers: operator-selected invitation/wildcard or clearly labeled platform credits. Public live-money bidding remains off.
-3. Review the first staging report and confirm that it answers the founder interview and launch-decision questions.
+1. Restore Vercel CLI authorization without sharing credentials.
+2. Choose a raw analytics retention period and deletion-request policy.
+3. Review the first staging report for usefulness and clarity.
 
 **Exit criteria**
 
-- A controlled staging visit, referral, two-startup exploration, vote, and share produce the expected report exactly once per defined visitor denominator.
-- Founders see only their own useful traffic data; admins see battle-level operational metrics.
-- No live payment can occur in the chosen free-pilot configuration.
+- Controlled traffic appears exactly once per defined visitor denominator.
+- Signed referral attribution cannot be reassigned to another startup or battle.
+- No report exposes raw identifiers or security fingerprints.
 
-### Phase B — Complete the public-launch foundation
+### Phase B — Complete the production foundation
 
 **Chris**
 
@@ -129,134 +132,131 @@ Weak founder demand or audience retention stops the paid-pilot path even if the 
 2. Choose and publish a monitored support/dispute address.
 3. Choose an uptime/error alert destination.
 4. Decide the permanent UTC rollover boundary.
-5. Confirm the initial geography and USD-only currency scope, or approve a different supported scope.
-6. Choose the initial paid-pilot maximum bid; the current staging ceiling is only a test setting.
+5. Confirm the initial launch geography and currency; v0.1 currently assumes USD.
+6. Choose the initial maximum bid; the $250 staging setting is only a test ceiling.
 7. Upgrade the production Neon resource from Free to a suitable paid production plan.
-8. Restrict production provider and project access to the smallest necessary group and record ownership outside the repository.
+8. Complete Stripe business, payout, support, statement, receipt, Radar, and live-webhook configuration.
+9. Restrict production project/provider access to the smallest necessary group.
 
 **Codex**
 
-1. Connect the approved domain to the production Vercel project and verify redirects/canonical URLs.
+1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
 2. Validate production configuration without exposing values.
 3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
-4. Add retention/cleanup for expired sessions, magic links, and raw analytics after the policy is approved.
+4. Add retention/cleanup for expired sessions, magic links, and raw analytics after Chris approves the policy.
 5. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
 
 **Exit criteria**
 
-- Production uses its own paid database, secrets, sender/domain, Turnstile keys, and provider configuration.
+- Production uses its own paid database, independent secrets, production sender/domain, production Turnstile keys, and live Stripe configuration.
 - Preview and staging cannot access the production database.
 - Health and lifecycle alerts reach a real person.
-- The support route and ownership/escalation record are current.
+- Support ownership and escalation paths are documented.
 
 ### Phase C — Finish legal, policy, and trust gates
 
 **Chris with qualified counsel**
 
-- approve the description of paid challenger placement as advertising;
+- approve paid challenger placement as advertising and disclose the invited opening placements;
 - define when bids become binding and how refunds, cancellations, failures, chargebacks, and disputes work;
 - approve privacy, cookie/analytics, IP hashing, retention, deletion, and data-request language;
 - define prohibited products, moderation appeals, founder representations, voting campaigns, and disqualification;
 - decide governing law, liability limits, indirect-tax handling, and required support disclosures;
-- define when a battle is cancelled, replayed, or corrected and what evidence is retained for a payment dispute.
+- define battle cancellation, replay, correction, and payment-dispute evidence procedures.
 
 **Codex after decisions are approved**
 
-- update the public rules, terms, privacy policy, disclosures, consent/cookie behavior if required, and operator runbooks;
-- add any product control required to make actual behavior match the approved policy;
-- verify paid placement is clear anywhere an auction or resulting challenger appears.
+- update public rules, terms, privacy, placement disclosures, and operator runbooks;
+- add any product control needed to align actual behavior with the approved policy;
+- verify invited and paid placements are accurately described everywhere they appear.
 
 **Exit criteria**
 
 - Final policies are published on the production domain and match product behavior.
 - A monitored support channel and written moderation/incident procedure exist.
-- Remaining counsel comments are either resolved or explicitly accepted by Chris before public traffic.
+- Remaining counsel comments are resolved or explicitly accepted by Chris.
 
-### Phase D — Recruit and prepare the launch cohort
+### Phase D — Prepare the opening participants
 
 **Chris**
 
-1. Recruit 8–12 founders with working products, clear pitches, usable presentation assets, and permission to share those assets.
-2. Obtain agreement to share the matchup and participate in a short post-battle interview.
-3. Select the opening champion, challenger, and at least one approved fallback for every planned rollover.
-4. Maintain alternates for broken links, withdrawals, moderation failures, or scheduling conflicts.
+1. Submit Nexura through the production founder flow using the canonical `https://nexura.fyi/` destination and presentation assets Chris has the right to use.
+2. Invite one founder to submit the opening challenger and agree to share the matchup.
+3. Identify a third distinct approved startup for the first auction's fallback, unless an eligible fallback is already available.
+4. Recruit or reach approved prospective bidders who are not Nexura or the opening challenger.
+5. Prepare voter outreach for the opening battle.
 
 **Codex**
 
-- provide the submission, presentation, referral-link, and interview/report checklist;
-- verify each scheduled startup is approved, public, safe to open, visually usable, and distinct from its opponent;
-- prepare the operator schedule and battle-by-battle tracking sheet/report links.
+- verify Nexura and the challenger are approved, safe to open, visually usable, and represented fairly;
+- verify the fallback is approved and distinct from both active participants;
+- prepare founder referral links, report access, and the opening-day operator checklist.
 
 **Exit criteria**
 
-- At least five complete matchups can run without recruiting during an active battle.
-- Every scheduled transition has an eligible fallback.
+- Nexura and the invited challenger are approved and ready.
+- An eligible fallback is configured before the first auction closes.
+- At least one operator is available during the opening auction settlement and rollover.
 
 ### Phase E — Instrumented production rehearsal
 
-**Codex and Chris together**
+Keep Stripe in test mode during this rehearsal.
 
-1. Run one accelerated production rehearsal before inviting public traffic.
-2. Confirm email authentication, Turnstile, voting, referral attribution, reporting, pause/resume, rollover, and alerts on the production domain.
-3. Confirm the free-pilot configuration cannot create a live Stripe charge.
-4. Exercise an operator recovery and document the elapsed time and report impact.
-5. Recheck backups/provider access and capture a go/no-go checklist without secrets.
+1. Create a temporary production rehearsal battle with approved rehearsal records, or use a pre-public accelerated rehearsal that is removed from the public launch schedule through normal admin controls.
+2. Confirm email, Turnstile, voting, referral attribution, reporting, pause/resume, settlement, rollover, and alerts on the production domain.
+3. Exercise successful capture, failed capture, duplicate webhook, retry, and refund/dispute tracing using test-mode provider records.
+4. Confirm exactly one successor and one auction are produced.
+5. Recheck provider access, database plan, backups, support routing, and the go/no-go checklist.
 
 **Exit criteria**
 
-- The report matches the rehearsal traffic.
-- No critical alert is silent.
-- There is exactly one active battle and one expected next-challenger path.
-- Chris explicitly authorizes the start of the free public pilot.
+- The production report matches controlled rehearsal traffic.
+- Every critical alert reaches its destination.
+- The payment and rollover matrix passes without a live charge.
+- Chris explicitly authorizes the live Stripe cutover and paid launch.
 
-### Phase F — Run the 5–7 battle free public pilot
+### Phase F — Controlled paid launch
 
-**Daily before rollover — Chris**
+**Opening day**
 
-- confirm both startup destinations work and disclosures are accurate;
-- confirm the next eligible fallback/challenger is configured;
-- review suspicious votes, support messages, and founder availability;
-- remain reachable during rollover and record any manual intervention.
+- start Nexura versus the invited challenger;
+- open the live paid auction for the following challenger slot;
+- keep the configured conservative bid cap and $5 minimum;
+- manually approve every bidding startup;
+- confirm the wildcard before auction close;
+- keep an operator available through settlement and rollover.
 
-**Daily after rollover — Codex/technical review**
+**Daily operations**
 
-- confirm exactly one battle and expected next-challenger path exist;
-- confirm reports, alerts, and referral attribution are updating;
-- investigate technical anomalies and ship only fixes needed for safety, reliability, or measurement integrity.
+- verify both startup destinations, disclosures, and the next fallback before rollover;
+- review suspicious votes, support messages, bids, and payment state;
+- confirm exactly one battle and expected auction exist after rollover;
+- send each founder their report and record satisfaction, useful downstream results, complaints, and willingness to participate again.
 
-**After each battle — Chris**
+Pause paid bidding immediately for duplicate/incorrect charges, invalid matchups, silent alerts, unresolved manipulation, policy mismatch, disproportionate disputes, or traffic too weak to justify the placement.
 
-- send each founder their report;
-- conduct the short founder interview;
-- record sharing, satisfaction, willingness-to-pay, complaints, and reported downstream value.
+### Phase G — Review after 7–14 days
 
-Do not add categories, comments, Elo, tournaments, subscriptions, investor tooling, native apps, or unrelated growth features during the bounded pilot.
+Review:
 
-### Phase G — Review evidence and make a paid-pilot decision
-
-At the end of 5–7 battles, Chris and Codex review the Section 3 metrics, interviews, support load, fraud rate, and operational interventions.
+- unique and returning visitors, verified vote conversion, and both-startup exploration;
+- outbound traffic and founder-attributed referrals;
+- eligible bidders, valid bids, auction fill, winning amount, and repeat bidding;
+- cost per outbound click and founder-reported downstream value;
+- failed payments, refunds, disputes, moderation, support load, and interventions.
 
 Choose one outcome explicitly:
 
-- **Continue to paid-pilot preparation** only if founders receive meaningful traffic, the audience returns, at least two founders name a concrete willingness to pay, and operations remain trustworthy.
-- **Adjust and rerun a bounded free pilot** if only one side of the audience/founder loop validates. Change one major variable at a time.
-- **Stop or reposition** if traffic has little founder value, engagement depends on launch novelty, or the operating burden makes a daily marketplace unattractive.
+- **Continue** when founders receive meaningful traffic, auctions show real competition, and at least some founders participate again.
+- **Adjust** when only the voter or founder side works. Change one major variable at a time and run another bounded period.
+- **Pause or reposition** when traffic has little founder value, demand depends on launch novelty, or operating/payment burden is disproportionate.
 
-### Phase H — Limited paid pilot, only after separate authorization
+Do not respond to weak validation by adding categories, comments, Elo, tournaments, subscriptions, investor tooling, or unrelated growth features.
 
-If Chris explicitly approves live payments after the evidence review:
+## 6. Immediate next actions
 
-- complete Stripe business/payout settings, Radar choices, receipts, support details, and live webhooks;
-- run the refund, duplicate-webhook, dispute-trace, and live-alert matrix before opening bidding;
-- begin at the documented $5 minimum and approved conservative cap;
-- run one battle and auction per day with manual startup approval and an operator available at settlement;
-- pause immediately for duplicate/incorrect charges, invalid matchups, unresolved manipulation, policy mismatch, disproportionate disputes, or traffic too weak to justify the auction.
-
-The paid pilot should run for 7–14 days or until there is enough evidence about valid bidders, repeat bidders, winning bid trend, cost per outbound click, useful founder outcomes, and payment/support burden.
-
-## 5. Immediate next actions from this checkpoint
-
-1. **Codex:** implement the Phase A reporting/referral slice and validate it locally.
-2. **Chris:** choose the raw analytics retention period and the free-pilot challenger mechanism.
-3. **Chris:** begin the production domain, monitoring destination, support address, and legal-review work in parallel.
-4. **Codex and Chris:** deploy and rehearse measurement on staging before scheduling public traffic.
+1. **Chris:** restore the Vercel CLI session.
+2. **Codex:** deploy `5e198dd` to staging and reconcile the controlled reporting flow.
+3. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
+4. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
+5. **Codex and Chris:** complete production/legal gates and the instrumented production rehearsal before enabling live Stripe.
