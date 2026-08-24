@@ -59,7 +59,7 @@ export function SubmissionForm({ turnstileSiteKey }: { turnstileSiteKey?: string
   return (
     <form onSubmit={submit} className="grid gap-6 rounded-3xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-6 shadow-hard sm:p-9">
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Startup name"><input name="name" required maxLength={60} className={inputClass} placeholder="Acme" /></Field>
+        <Field label="Startup name"><input name="name" required minLength={2} maxLength={60} className={inputClass} placeholder="Acme" /></Field>
         <Field label="Product status">
           <select name="launchStatus" className={inputClass} defaultValue="live">
             <option value="live">Live</option><option value="beta">Beta</option><option value="waitlist">Waitlist</option>
@@ -68,7 +68,7 @@ export function SubmissionForm({ turnstileSiteKey }: { turnstileSiteKey?: string
       </div>
       <Field label="Product URL"><input name="url" type="url" required className={inputClass} placeholder="https://yourstartup.com" /></Field>
       <Field label="One-sentence pitch" hint="Maximum 160 characters. Tell voters what the product does, not why it is revolutionary.">
-        <textarea name="tagline" required maxLength={160} rows={3} className={`${inputClass} py-3`} placeholder="Help product teams…" />
+        <textarea name="tagline" required minLength={15} maxLength={160} rows={3} className={`${inputClass} py-3`} placeholder="Help product teams…" />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Logo URL" hint="Optional HTTPS image"><input name="logoUrl" type="url" className={inputClass} placeholder="https://…" /></Field>
