@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { getAdminData } from "@/db/queries";
 import { auditLogs, auctions, battles, bids, magicLinks, sessions, startups, users, votes } from "@/db/schema";
 import { claimMagicLinkAttempt, issueMagicLink, verifyMagicLinkToken } from "@/lib/auth";
 import { placeBid } from "@/services/auction";
@@ -61,6 +62,8 @@ describe("core v0.1 workflow", () => {
     expect(settled.status).toBe("awarded");
     const [winningBid] = await db.select().from(bids).where(eq(bids.id, bid.id));
     expect(winningBid.paymentStatus).toBe("captured");
+    const adminData = await getAdminData();
+    expect(adminData.auctions.find((auction) => auction.id === ids.auction)?.status).toBe("awarded");
   });
 
   it("finalizes a tie for the champion and schedules the wildcard challenger", async () => {

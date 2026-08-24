@@ -185,8 +185,8 @@ export async function getAdminData() {
       db
         .select()
         .from(auctions)
-        .where(inArray(auctions.status, ["open", "paused", "closed", "settling", "no_bid"]))
-        .orderBy(desc(auctions.createdAt)),
+        .orderBy(desc(auctions.createdAt))
+        .limit(20),
       db
         .select({ vote: votes, user: users })
         .from(votes)
