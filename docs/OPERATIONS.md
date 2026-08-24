@@ -42,7 +42,7 @@ EMAIL_FROM=Startup Arena <hello@your-domain.example>
 ADMIN_EMAILS=founder@your-domain.example
 ```
 
-Verify the sender domain with the email provider. Magic links expire after 15 minutes and can be used once.
+Verify the sender domain with the email provider. Magic links expire after 15 minutes and can be used once. Test both same-device and cross-device verification; a link opened on a phone should complete and redirect the original requesting browser without creating a phone session.
 
 ## Stripe
 

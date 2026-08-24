@@ -3,7 +3,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLogs, auctions, battles, bids, magicLinks, sessions, startups, users, votes } from "@/db/schema";
-import { issueMagicLink, redeemMagicLinkToken } from "@/lib/auth";
+import { claimMagicLinkAttempt, issueMagicLink, verifyMagicLinkToken } from "@/lib/auth";
 import { placeBid } from "@/services/auction";
 import { createInitialBattle, setAuctionPaused, setBattlePaused } from "@/services/admin";
 import { ensureNextBattle, finalizeBattle, runScheduledTransitions, settleAuction } from "@/services/rollover";
@@ -136,19 +136,29 @@ describe("core v0.1 workflow", () => {
     expect(createdAudits).toHaveLength(1);
   });
 
-  it("atomically consumes a magic link only once", async () => {
+  it("verifies once and atomically signs in only the requesting browser", async () => {
     const magic = await issueMagicLink("atomic@example.com");
-    const token = new URL(magic.verifyUrl).searchParams.get("token");
+    const token = new URLSearchParams(new URL(magic.verifyUrl).hash.slice(1)).get("token");
     expect(token).toBeTruthy();
+    expect((await claimMagicLinkAttempt(magic.browserToken)).status).toBe("pending");
+    expect((await claimMagicLinkAttempt("a-different-browser-token")).status).toBe("missing");
 
-    const results = await Promise.all([
-      redeemMagicLinkToken(token!),
-      redeemMagicLinkToken(token!)
+    const verifications = await Promise.all([
+      verifyMagicLinkToken(token!),
+      verifyMagicLinkToken(token!)
+    ]);
+    expect(verifications.filter(Boolean)).toHaveLength(1);
+    expect(await db.select().from(sessions)).toHaveLength(0);
+
+    const claims = await Promise.all([
+      claimMagicLinkAttempt(magic.browserToken),
+      claimMagicLinkAttempt(magic.browserToken)
     ]);
 
-    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(claims.filter((result) => result.status === "authenticated")).toHaveLength(1);
     expect(await db.select().from(sessions)).toHaveLength(1);
     const [link] = await db.select().from(magicLinks);
     expect(link.consumedAt).toBeInstanceOf(Date);
+    expect(link.claimedAt).toBeInstanceOf(Date);
   });
 });

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { magicLinks } from "@/db/schema";
-import { issueMagicLink, sendMagicLink } from "@/lib/auth";
+import { issueMagicLink, rememberMagicLinkBrowser, sendMagicLink } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { jsonError } from "@/lib/http";
 import { assertSameOrigin, verifyTurnstile } from "@/lib/security";
@@ -38,8 +38,11 @@ export async function POST(request: Request) {
 
     const magic = await issueMagicLink(email, input.next);
     const delivery = await sendMagicLink(magic.email, magic.verifyUrl);
+    await rememberMagicLinkBrowser(magic.browserToken, magic.expiresAt);
     return NextResponse.json({
-      message: delivery.delivered ? "Check your inbox for a sign-in link." : "Development link created below.",
+      message: delivery.delivered
+        ? "Check your email. This tab will sign you in automatically after verification."
+        : "Development link created below.",
       devUrl: env.NODE_ENV === "production" ? undefined : magic.verifyUrl
     });
   } catch (error) {

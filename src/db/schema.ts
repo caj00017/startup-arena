@@ -99,12 +99,16 @@ export const magicLinks = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
     tokenHash: text("token_hash").notNull(),
+    browserTokenHash: text("browser_token_hash"),
+    nextPath: text("next_path").notNull().default("/"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     uniqueIndex("magic_links_token_hash_unique").on(table.tokenHash),
+    uniqueIndex("magic_links_browser_token_hash_unique").on(table.browserTokenHash),
     index("magic_links_email_idx").on(table.email)
   ]
 );

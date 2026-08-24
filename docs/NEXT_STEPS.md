@@ -82,7 +82,7 @@ Credentials must be entered directly into the hosting provider's encrypted envir
 
 - Verify the sending domain in Resend.
 - Configure `RESEND_API_KEY` and `EMAIL_FROM` in staging.
-- Request and consume a real magic link.
+- Request and consume a real magic link on the same device and across desktop-to-phone verification.
 - Confirm expired and reused links fail.
 - Verify common inbox placement, including Gmail and Outlook.
 - Add a monitored reply/support address.

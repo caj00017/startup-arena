@@ -25,7 +25,7 @@ PGlite uses the same PostgreSQL schema and Drizzle queries as production. It is 
 
 - `users` owns identity, role, Stripe customer/payment-method references, and verification status.
 - `sessions` stores only hashes of random session tokens.
-- `magic_links` stores only hashes of single-use, 15-minute authentication tokens.
+- `magic_links` stores only hashes of single-use, 15-minute email-verification and browser-claim tokens.
 - `startups` owns founder-submitted presentation and moderation state.
 - `battles` owns participants, time window, final counts, winner, and incumbent streak.
 - `auctions` belongs to the active battle and determines the next challenger.
@@ -72,7 +72,7 @@ Renewable database transition leases prevent overlapping workers from settling o
 
 ## Authentication
 
-Users request a magic link. The server stores a SHA-256 hash of a random token and sends the raw token only in the link. A successful verification consumes the token and sets a random, HTTP-only, `SameSite=Lax` session cookie. Production cookies are secure.
+Users request a magic link. The server stores hashes of two independent random tokens: an email token sent in the link fragment and a browser token held in an HTTP-only, `SameSite=Lax` cookie. Opening the email link on any device verifies the attempt through a same-origin POST; only the requesting browser can atomically claim it and receive a random session cookie. The original tab polls while waiting and redirects automatically after verification. Production cookies are secure.
 
 Development displays the link in the UI. Production refuses to create a magic link unless Resend is configured.
 

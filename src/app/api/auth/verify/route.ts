@@ -1,14 +1,29 @@
 import { NextResponse } from "next/server";
-import { consumeMagicLink } from "@/lib/auth";
-import { env } from "@/lib/env";
+import { z } from "zod";
+import { claimMagicLinkForBrowser, verifyMagicLinkToken } from "@/lib/auth";
+import { jsonError } from "@/lib/http";
+import { assertSameOrigin } from "@/lib/security";
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const token = url.searchParams.get("token");
-  const next = url.searchParams.get("next") || "/";
-  if (!token || !(await consumeMagicLink(token))) {
-    return NextResponse.redirect(new URL("/signin?error=expired", env.NEXT_PUBLIC_APP_URL));
+const schema = z.object({ token: z.string().min(32).max(512) });
+
+export async function POST(request: Request) {
+  try {
+    await assertSameOrigin(request);
+    const { token } = schema.parse(await request.json());
+    const link = await verifyMagicLinkToken(token);
+    if (!link) {
+      return NextResponse.json(
+        { error: "This verification link is invalid or expired." },
+        { status: 410 }
+      );
+    }
+
+    const claim = await claimMagicLinkForBrowser(link.id);
+    return NextResponse.json({
+      status: claim.status === "authenticated" ? "authenticated" : "verified",
+      redirect: claim.status === "authenticated" ? claim.nextPath : undefined
+    });
+  } catch (error) {
+    return jsonError(error);
   }
-  const destination = next.startsWith("/") && !next.startsWith("//") ? next : "/";
-  return NextResponse.redirect(new URL(destination, env.NEXT_PUBLIC_APP_URL));
 }

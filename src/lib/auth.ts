@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -7,7 +7,29 @@ import { adminEmails, assertProductionSecrets, env } from "./env";
 import { hashToken, randomToken } from "./security";
 
 const sessionCookie = "arena_session";
+const loginAttemptCookie = "arena_login_attempt";
 const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
+const magicLinkDurationMs = 15 * 60 * 1000;
+
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    maxAge: sessionDurationMs / 1000
+  };
+}
+
+function loginAttemptCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    maxAge
+  };
+}
 
 export async function getCurrentUser(): Promise<User | null> {
   const token = (await cookies()).get(sessionCookie)?.value;
@@ -67,48 +89,85 @@ export async function issueMagicLink(emailValue: string, next = "/") {
   assertProductionSecrets();
   const email = emailValue.trim().toLowerCase();
   const token = randomToken();
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-  await db.insert(magicLinks).values({ email, tokenHash: hashToken(token), expiresAt });
-
+  const browserToken = randomToken();
+  const expiresAt = new Date(Date.now() + magicLinkDurationMs);
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
-  const verifyUrl = `${env.NEXT_PUBLIC_APP_URL}/api/auth/verify?token=${encodeURIComponent(token)}&next=${encodeURIComponent(safeNext)}`;
-  return { email, verifyUrl, expiresAt };
-}
 
-export async function consumeMagicLink(token: string) {
-  const result = await redeemMagicLinkToken(token);
-  if (!result) return null;
-
-  (await cookies()).set(sessionCookie, result.sessionToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: env.NODE_ENV === "production",
-    path: "/",
-    maxAge: sessionDurationMs / 1000
+  await db.insert(magicLinks).values({
+    email,
+    tokenHash: hashToken(token),
+    browserTokenHash: hashToken(browserToken),
+    nextPath: safeNext,
+    expiresAt
   });
 
-  return result.user;
+  const verifyUrl = `${env.NEXT_PUBLIC_APP_URL}/signin/verify#token=${encodeURIComponent(token)}`;
+  return { email, verifyUrl, expiresAt, browserToken };
 }
 
-export async function redeemMagicLinkToken(token: string) {
-  const tokenHash = hashToken(token);
+export async function rememberMagicLinkBrowser(browserToken: string, expiresAt: Date) {
+  const secondsRemaining = Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
+  (await cookies()).set(
+    loginAttemptCookie,
+    browserToken,
+    loginAttemptCookieOptions(secondsRemaining)
+  );
+}
+
+export async function verifyMagicLinkToken(token: string) {
+  const now = new Date();
+  const [link] = await db
+    .update(magicLinks)
+    .set({ consumedAt: now })
+    .where(
+      and(
+        eq(magicLinks.tokenHash, hashToken(token)),
+        isNull(magicLinks.consumedAt),
+        gt(magicLinks.expiresAt, now)
+      )
+    )
+    .returning();
+
+  return link ?? null;
+}
+
+export async function claimMagicLinkAttempt(browserToken: string, expectedLinkId?: string) {
+  const browserTokenHash = hashToken(browserToken);
   const now = new Date();
 
   return db.transaction(async (tx) => {
+    const [attempt] = await tx
+      .select()
+      .from(magicLinks)
+      .where(
+        expectedLinkId
+          ? and(
+              eq(magicLinks.browserTokenHash, browserTokenHash),
+              eq(magicLinks.id, expectedLinkId)
+            )
+          : eq(magicLinks.browserTokenHash, browserTokenHash)
+      )
+      .limit(1);
+
+    if (!attempt) return { status: "missing" as const };
+    if (attempt.expiresAt <= now) return { status: "expired" as const };
+    if (!attempt.consumedAt) return { status: "pending" as const };
+    if (attempt.claimedAt) return { status: "claimed" as const };
+
     const [link] = await tx
       .update(magicLinks)
-      .set({ consumedAt: now })
+      .set({ claimedAt: now })
       .where(
         and(
-          eq(magicLinks.tokenHash, tokenHash),
-          isNull(magicLinks.consumedAt),
+          eq(magicLinks.id, attempt.id),
+          isNotNull(magicLinks.consumedAt),
+          isNull(magicLinks.claimedAt),
           gt(magicLinks.expiresAt, now)
         )
       )
       .returning();
 
-    if (!link) return null;
+    if (!link) return { status: "claimed" as const };
 
     const [existingUser] = await tx.select().from(users).where(eq(users.email, link.email)).limit(1);
     const needsOwnershipCheck = existingUser?.role === "admin" && !adminEmails.has(link.email);
@@ -147,8 +206,35 @@ export async function redeemMagicLinkToken(token: string) {
       expiresAt: new Date(now.getTime() + sessionDurationMs)
     });
 
-    return { user, sessionToken };
+    return {
+      status: "authenticated" as const,
+      user,
+      sessionToken,
+      nextPath: link.nextPath
+    };
   });
+}
+
+export async function claimMagicLinkForBrowser(expectedLinkId?: string) {
+  const cookieStore = await cookies();
+  const browserToken = cookieStore.get(loginAttemptCookie)?.value;
+  if (!browserToken) return { status: "missing" as const };
+
+  const result = await claimMagicLinkAttempt(browserToken, expectedLinkId);
+  if (result.status === "authenticated") {
+    cookieStore.set(sessionCookie, result.sessionToken, sessionCookieOptions());
+    cookieStore.set(loginAttemptCookie, "", loginAttemptCookieOptions(0));
+    return { status: result.status, user: result.user, nextPath: result.nextPath };
+  }
+
+  if (
+    result.status === "expired" ||
+    result.status === "claimed" ||
+    (result.status === "missing" && !expectedLinkId)
+  ) {
+    cookieStore.set(loginAttemptCookie, "", loginAttemptCookieOptions(0));
+  }
+  return result;
 }
 
 export async function clearSession() {
@@ -176,7 +262,7 @@ export async function sendMagicLink(email: string, verifyUrl: string) {
       from: env.EMAIL_FROM,
       to: email,
       subject: "Your Startup Arena sign-in link",
-      html: `<p>Sign in to Startup Arena:</p><p><a href="${verifyUrl}">Continue to Startup Arena</a></p><p>This link expires in 15 minutes.</p>`
+      html: `<p>Verify your email for Startup Arena:</p><p><a href="${verifyUrl}">Verify email</a></p><p>The browser where you started will sign in automatically. This link expires in 15 minutes.</p>`
     })
   });
 

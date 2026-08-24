@@ -57,7 +57,7 @@ Three generated SQL migrations are committed under `drizzle/`.
 
 ## 4. Authentication and security
 
-A first-party magic-link flow was implemented to avoid coupling v0.1 to a hosted auth product. It creates random single-use tokens, stores hashes, expires them after 15 minutes, and issues random HTTP-only sessions.
+A first-party magic-link flow was implemented to avoid coupling v0.1 to a hosted auth product. Each 15-minute attempt has separate hashed email-verification and browser-claim tokens. The verification link can open on another device, while only the original browser's HTTP-only claim cookie can create its random session.
 
 Development returns the magic URL to the sign-in screen. Production requires a configured Resend sender and never exposes the URL in the response.
 
