@@ -111,6 +111,9 @@ describe("core v0.1 workflow", () => {
     const firstRun = await runScheduledTransitions(now);
     expect(firstRun.battles[0]?.next.requiresWildcard).toBe(true);
     expect((await db.select().from(battles).where(eq(battles.previousBattleId, ids.battle)))).toHaveLength(0);
+    const strandedAdminData = await getAdminData();
+    expect(strandedAdminData.hasBattles).toBe(true);
+    expect(strandedAdminData.battles).toHaveLength(0);
 
     await db
       .update(auctions)

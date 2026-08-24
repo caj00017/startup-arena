@@ -178,10 +178,11 @@ export async function getAccountData(userId: string) {
 }
 
 export async function getAdminData() {
-  const [submissionRows, activeBattleRows, auctionRows, voteReviewRows, approvedStartups] =
+  const [submissionRows, activeBattleRows, battlePresenceRows, auctionRows, voteReviewRows, approvedStartups] =
     await Promise.all([
       db.select().from(startups).where(eq(startups.status, "pending")).orderBy(asc(startups.createdAt)),
       db.select().from(battles).where(inArray(battles.status, ["live", "scheduled", "paused"])).orderBy(desc(battles.startsAt)),
+      db.select({ id: battles.id }).from(battles).limit(1),
       db
         .select()
         .from(auctions)
@@ -198,6 +199,7 @@ export async function getAdminData() {
   return {
     submissions: submissionRows,
     battles: activeBattleRows,
+    hasBattles: battlePresenceRows.length > 0,
     auctions: auctionRows,
     votes: voteReviewRows,
     approvedStartups
