@@ -1,6 +1,6 @@
 # Startup Arena — Paid-First Launch Plan
 
-**Status:** Staging reporting and leaderboard gates passed; production foundation is next
+**Status:** Staging reporting, leaderboard, and retention gates passed; production foundation is next
 
 **Last reconciled:** August 24, 2026
 
@@ -150,7 +150,7 @@ The cleanup job is implemented after the authenticated scheduled rollover and al
 1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
 2. Validate production configuration without exposing values.
 3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
-4. Deploy and rehearse the implemented retention cleanup for expired sessions, magic links, and 30-day raw traffic/vote data.
+4. Retention cleanup is deployed and its authenticated scheduled staging invocation passed; reconcile provider backup/log roll-off when the remaining category-specific legal schedules are approved.
 5. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
 
 **Exit criteria**
