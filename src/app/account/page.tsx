@@ -1,18 +1,22 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, CreditCard, MousePointerClick } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, CreditCard, MousePointerClick, Share2, Users } from "lucide-react";
 import { AccountActions } from "@/components/account-actions";
 import { StartupMark } from "@/components/startup-mark";
 import { LinkButton, StatusPill } from "@/components/ui";
 import { getAccountData } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/utils";
+import { getFounderBattleReports } from "@/services/analytics";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Account" };
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const data = await getAccountData(user.id);
+  const [data, battleReports] = await Promise.all([
+    getAccountData(user.id),
+    getFounderBattleReports(user.id)
+  ]);
   const counts = new Map(data.events.map((row) => [`${row.startupId}:${row.type}`, Number(row.total)]));
 
   return (
@@ -53,6 +57,32 @@ export default async function AccountPage() {
           )) : <div className="rounded-2xl border-2 border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">No startup submitted yet.</div>}
         </div>
       </section>
+
+      {battleReports.length > 0 && (
+        <section className="mt-14">
+          <h2 className="font-display text-4xl font-black tracking-[-0.04em]">Battle traffic</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">First-party totals for matchups featuring your startups.</p>
+          <div className="mt-5 grid gap-5">
+            {battleReports.map((report) => (
+              <article key={`${report.battle.id}:${report.startup.id}`} className="rounded-2xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-5 shadow-hard-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-black">{report.startup.name} vs. {report.opponent.name}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--muted)]">{report.battle.startsAt.toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })} · UTC</p>
+                  </div>
+                  <Link href={`/battle/${report.battle.id}`} className="text-sm font-black underline">Open battle</Link>
+                </div>
+                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <span className="flex items-center gap-2 font-bold"><Users size={16} /> {report.uniqueVisitors} visitors</span>
+                  <span className="flex items-center gap-2 font-bold"><MousePointerClick size={16} /> {report.outboundClicks} clicks</span>
+                  <span className="flex items-center gap-2 font-bold"><Share2 size={16} /> {report.founderShares} shares</span>
+                  <span className="flex items-center gap-2 font-bold"><ArrowRight size={16} /> {report.referredVisitors} referred visitors</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-14">
         <h2 className="font-display text-4xl font-black tracking-[-0.04em]">Bid history</h2>

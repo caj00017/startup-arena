@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { battles, votes } from "@/db/schema";
+import { getAnalyticsVisitorHash } from "@/lib/analytics";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonError, unauthorized } from "@/lib/http";
 import { assertSameOrigin, getRequestFingerprint, verifyTurnstile } from "@/lib/security";
@@ -23,8 +24,11 @@ export async function POST(request: Request) {
     if (!(await verifyTurnstile(input.turnstileToken))) {
       return NextResponse.json({ error: "Bot verification failed." }, { status: 400 });
     }
-    const fingerprint = await getRequestFingerprint();
-    await castVote({ ...input, userId: user.id, ...fingerprint });
+    const [fingerprint, visitorHash] = await Promise.all([
+      getRequestFingerprint(),
+      getAnalyticsVisitorHash()
+    ]);
+    await castVote({ ...input, userId: user.id, ...fingerprint, visitorHash });
 
     const [battle] = await db.select().from(battles).where(eq(battles.id, input.battleId)).limit(1);
     const grouped = await db

@@ -11,6 +11,7 @@ export async function castVote(input: {
   userId: string;
   ipHash: string;
   userAgentHash: string;
+  visitorHash?: string;
 }) {
   const [battle] = await db.select().from(battles).where(eq(battles.id, input.battleId)).limit(1);
   if (!battle || !isBattleLive(battle)) throw new VoteError("This battle is not accepting votes.");
@@ -56,7 +57,9 @@ export async function castVote(input: {
         eventType: "vote",
         battleId: input.battleId,
         startupId: input.startupId,
-        userId: input.userId
+        userId: input.userId,
+        sessionHash: input.visitorHash,
+        metadata: input.visitorHash ? { visitorIdentity: "anonymous_v1" } : {}
       });
       return vote;
     });

@@ -3,8 +3,9 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { getAdminData } from "@/db/queries";
-import { auditLogs, auctions, battles, bids, magicLinks, sessions, startups, users, votes } from "@/db/schema";
+import { auditLogs, auctions, battles, bids, events, magicLinks, sessions, startups, users, votes } from "@/db/schema";
 import { claimMagicLinkAttempt, issueMagicLink, verifyMagicLinkToken } from "@/lib/auth";
+import { getBattleReport, getFounderBattleReports, recordBrowserEvent, recordOutboundClick } from "@/services/analytics";
 import { placeBid } from "@/services/auction";
 import { createInitialBattle, setAuctionPaused, setBattlePaused } from "@/services/admin";
 import { ensureNextBattle, finalizeBattle, runScheduledTransitions, settleAuction } from "@/services/rollover";
@@ -53,6 +54,146 @@ describe("core v0.1 workflow", () => {
     await castVote({ battleId: ids.battle, startupId: ids.challenger, userId: ids.voter, ipHash: "ip-one", userAgentHash: "agent-one" });
     await expect(castVote({ battleId: ids.battle, startupId: ids.champion, userId: ids.voter, ipHash: "ip-one", userAgentHash: "agent-one" })).rejects.toThrow("already voted");
     expect(await db.select().from(votes)).toHaveLength(1);
+  });
+
+  it("reports unique, returning, referral, exploration, and moderation evidence", async () => {
+    const [battle] = await db.select().from(battles).where(eq(battles.id, ids.battle));
+    const priorBattleId = "03000000-0000-4000-8000-000000000099";
+    await db.insert(battles).values({
+      id: priorBattleId,
+      championStartupId: ids.champion,
+      challengerStartupId: ids.challenger,
+      startsAt: new Date(battle.startsAt.getTime() - 2 * 86_400_000),
+      endsAt: new Date(battle.startsAt.getTime() - 86_400_000),
+      status: "finalized",
+      winnerStartupId: ids.champion,
+      finalizedAt: new Date(battle.startsAt.getTime() - 86_400_000)
+    });
+    await db.insert(events).values({
+      eventType: "battle_impression",
+      battleId: priorBattleId,
+      sessionHash: "returning-visitor",
+      createdAt: new Date(battle.startsAt.getTime() - 60_000)
+    });
+
+    await recordBrowserEvent({
+      eventType: "battle_impression",
+      battleId: ids.battle,
+      referralStartupId: ids.champion,
+      visitorHash: "returning-visitor"
+    });
+    await recordBrowserEvent({
+      eventType: "battle_impression",
+      battleId: ids.battle,
+      visitorHash: "returning-visitor"
+    });
+    await recordBrowserEvent({
+      eventType: "battle_impression",
+      battleId: ids.battle,
+      visitorHash: "new-visitor"
+    });
+    await expect(
+      recordBrowserEvent({
+        eventType: "battle_impression",
+        battleId: ids.battle,
+        referralStartupId: ids.bidder,
+        visitorHash: "spoofed-referral"
+      })
+    ).rejects.toThrow("not part of this battle");
+
+    await recordOutboundClick({
+      battleId: ids.battle,
+      startupId: ids.champion,
+      visitorHash: "returning-visitor"
+    });
+    await recordOutboundClick({
+      battleId: ids.battle,
+      startupId: ids.challenger,
+      visitorHash: "returning-visitor"
+    });
+    await recordOutboundClick({
+      battleId: ids.battle,
+      startupId: ids.challenger,
+      visitorHash: "new-visitor"
+    });
+    await recordBrowserEvent({
+      eventType: "share",
+      battleId: ids.battle,
+      startupId: ids.champion,
+      userId: ids.championOwner,
+      visitorHash: "founder-visitor"
+    });
+    await expect(
+      recordBrowserEvent({
+        eventType: "share",
+        battleId: ids.battle,
+        startupId: ids.champion,
+        userId: ids.challengerOwner,
+        visitorHash: "other-founder"
+      })
+    ).rejects.toThrow("Only the startup owner");
+
+    await castVote({
+      battleId: ids.battle,
+      startupId: ids.champion,
+      userId: ids.voter,
+      ipHash: "report-ip-one",
+      userAgentHash: "report-agent-one",
+      visitorHash: "returning-visitor"
+    });
+    const [invalidVote] = await db
+      .insert(votes)
+      .values({
+        battleId: ids.battle,
+        startupId: ids.challenger,
+        userId: ids.challengerOwner,
+        ipHash: "report-ip-two",
+        fraudStatus: "invalid"
+      })
+      .returning();
+    await db.insert(auditLogs).values({
+      actorUserId: ids.championOwner,
+      action: "vote.moderated",
+      entityType: "vote",
+      entityId: invalidVote.id
+    });
+
+    const report = await getBattleReport(ids.battle);
+    expect(report).not.toBeNull();
+    expect(report).toMatchObject({
+      uniqueVisitors: 2,
+      verifiedVotes: 1,
+      voteConversion: 0.5,
+      returningVisitors: 1,
+      returningVisitorRate: 0.5,
+      exploredBoth: 1,
+      exploredBothRate: 0.5,
+      suspiciousVotes: 1,
+      suspiciousVoteRate: 0.5,
+      operationalInterventions: 1
+    });
+    expect(report?.champion).toMatchObject({
+      outboundClicks: 1,
+      uniqueOutboundVisitors: 1,
+      founderShares: 1,
+      referredVisitors: 1,
+      referredVoters: 1,
+      referralVoteConversion: 1
+    });
+    expect(report?.challenger).toMatchObject({
+      outboundClicks: 2,
+      uniqueOutboundVisitors: 2,
+      referredVisitors: 0
+    });
+
+    const founderReports = await getFounderBattleReports(ids.championOwner);
+    expect(founderReports.find((item) => item.battle.id === ids.battle)).toMatchObject({
+      startup: { id: ids.champion },
+      uniqueVisitors: 2,
+      outboundClicks: 1,
+      founderShares: 1,
+      referredVisitors: 1
+    });
   });
 
   it("accepts an eligible founder bid and captures the winner in mock mode", async () => {

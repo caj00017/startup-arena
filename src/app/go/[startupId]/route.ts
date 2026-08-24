@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
-import { events, startups } from "@/db/schema";
+import { startups } from "@/db/schema";
+import { getAnalyticsVisitorHash } from "@/lib/analytics";
 import { getCurrentUser } from "@/lib/auth";
-import { getRequestFingerprint } from "@/lib/security";
 import { isPublicStartupStatus } from "@/lib/domain";
+import { recordOutboundClick } from "@/services/analytics";
 
 export async function GET(request: Request, { params }: { params: Promise<{ startupId: string }> }) {
   const { startupId } = await params;
@@ -14,14 +16,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ star
   }
 
   const url = new URL(request.url);
-  const battleId = url.searchParams.get("battle");
-  const [user, fingerprint] = await Promise.all([getCurrentUser(), getRequestFingerprint()]);
-  await db.insert(events).values({
-    eventType: "outbound_click",
-    battleId: battleId || undefined,
+  const battleResult = z.string().uuid().safeParse(url.searchParams.get("battle"));
+  const [user, visitorHash] = await Promise.all([
+    getCurrentUser(),
+    getAnalyticsVisitorHash()
+  ]);
+  await recordOutboundClick({
+    battleId: battleResult.success ? battleResult.data : undefined,
     startupId: startup.id,
     userId: user?.id,
-    sessionHash: fingerprint.ipHash
+    visitorHash
   });
 
   return NextResponse.redirect(startup.url, 307);

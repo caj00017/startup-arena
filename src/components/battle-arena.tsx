@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Check, Crown, Swords } from "lucide-react";
+import { ArrowUpRight, Check, Crown, Share2, Swords } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button, StatusPill } from "./ui";
 import { StartupMark } from "./startup-mark";
@@ -25,7 +25,8 @@ export function BattleArena({
   initialVoteStartupId,
   signedIn,
   isLive,
-  turnstileSiteKey
+  turnstileSiteKey,
+  founderReferralCodes = {}
 }: {
   battleId: string;
   champion: StartupCardData;
@@ -36,6 +37,7 @@ export function BattleArena({
   signedIn: boolean;
   isLive: boolean;
   turnstileSiteKey?: string;
+  founderReferralCodes?: Record<string, string>;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState(initialVoteStartupId || null);
@@ -45,6 +47,8 @@ export function BattleArena({
   const [error, setError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileReset, setTurnstileReset] = useState(0);
+  const [sharedStartupId, setSharedStartupId] = useState<string | null>(null);
+  const [shareError, setShareError] = useState("");
 
   async function vote(startupId: string) {
     if (!signedIn) {
@@ -77,6 +81,42 @@ export function BattleArena({
     router.refresh();
   }
 
+  async function shareBattle(startup: StartupCardData) {
+    const referralCode = founderReferralCodes[startup.id];
+    if (!referralCode) return;
+    const shareUrl = `${window.location.origin}/battle/${battleId}?ref=${encodeURIComponent(referralCode)}`;
+    setShareError("");
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${startup.name} is in Startup Arena`,
+          text: `Explore the matchup and vote for ${startup.name}.`,
+          url: shareUrl
+        });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        throw new Error("Sharing is unavailable in this browser.");
+      }
+
+      setSharedStartupId(startup.id);
+      void fetch("/api/events", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          eventType: "share",
+          battleId,
+          startupId: startup.id
+        })
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareError(
+        error instanceof Error ? error.message : "The battle link could not be shared."
+      );
+    }
+  }
+
   const total = championVotes + challengerVotes;
   const showResults = Boolean(selected) || !isLive;
   const championPercent = percentage(championVotes, total);
@@ -96,6 +136,9 @@ export function BattleArena({
           disabled={Boolean(selected) || !isLive || waitingForVerification}
           onVote={() => vote(champion.id)}
           battleId={battleId}
+          ownerCanShare={Boolean(founderReferralCodes[champion.id])}
+          shared={sharedStartupId === champion.id}
+          onShare={() => shareBattle(champion)}
         />
 
         <div className="z-10 flex items-center justify-center lg:flex-col">
@@ -114,6 +157,9 @@ export function BattleArena({
           disabled={Boolean(selected) || !isLive || waitingForVerification}
           onVote={() => vote(challenger.id)}
           battleId={battleId}
+          ownerCanShare={Boolean(founderReferralCodes[challenger.id])}
+          shared={sharedStartupId === challenger.id}
+          onShare={() => shareBattle(challenger)}
         />
       </div>
 
@@ -145,6 +191,7 @@ export function BattleArena({
         )}
       </div>
       {error && <p role="alert" className="mt-4 text-center text-sm font-bold text-red-700">{error}</p>}
+      {shareError && <p role="alert" className="mt-4 text-center text-sm font-bold text-red-700">{shareError}</p>}
     </section>
   );
 }
@@ -158,7 +205,10 @@ function StartupCard({
   pending,
   disabled,
   onVote,
-  battleId
+  battleId,
+  ownerCanShare,
+  shared,
+  onShare
 }: {
   startup: StartupCardData;
   label: string;
@@ -169,6 +219,9 @@ function StartupCard({
   disabled: boolean;
   onVote: () => void;
   battleId: string;
+  ownerCanShare: boolean;
+  shared: boolean;
+  onShare: () => void;
 }) {
   return (
     <article className="card-lift flex min-h-[370px] flex-col rounded-3xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-5 shadow-hard sm:p-7">
@@ -201,6 +254,15 @@ function StartupCard({
           {selected ? <><Check size={17} /> Your pick</> : pending ? "Recording…" : `Vote ${startup.name}`}
         </Button>
       </div>
+      {ownerCanShare && (
+        <button
+          type="button"
+          onClick={onShare}
+          className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--foreground)] px-4 text-sm font-black hover:bg-[#edf3fa]"
+        >
+          {shared ? <><Check size={17} /> Shared</> : <><Share2 size={17} /> Share your battle</>}
+        </button>
+      )}
     </article>
   );
 }

@@ -177,6 +177,14 @@ export async function getAccountData(userId: string) {
   return { startups: ownedStartups, bids: bidRows, events: eventRows };
 }
 
+export async function getOwnedStartupIds(userId: string) {
+  const rows = await db
+    .select({ id: startups.id })
+    .from(startups)
+    .where(eq(startups.ownerId, userId));
+  return rows.map((startup) => startup.id);
+}
+
 export async function getAdminData() {
   const [submissionRows, activeBattleRows, battlePresenceRows, auctionRows, voteReviewRows, approvedStartups] =
     await Promise.all([

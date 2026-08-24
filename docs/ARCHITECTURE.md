@@ -31,7 +31,7 @@ PGlite uses the same PostgreSQL schema and Drizzle queries as production. It is 
 - `auctions` belongs to the active battle and determines the next challenger.
 - `bids` is an immutable bid history except for settlement/payment status.
 - `votes` enforces a unique `(battle_id, user_id)` constraint.
-- `events` records impressions, clicks, votes, shares, and submissions.
+- `events` records impressions, clicks, votes, signed founder referrals, shares, and submissions. Browser analytics use a random first-party token whose keyed hash—not the token or raw IP—is persisted with each event.
 - `audit_logs` records consequential founder/admin/system mutations.
 - `webhook_events` makes Stripe webhook processing idempotent.
 
@@ -95,3 +95,9 @@ Development uses a clearly identified mock adapter. Production refuses to verify
 - normalized HTTP/HTTPS startup URLs.
 
 These controls are appropriate for validation traffic, not a final high-scale fraud system.
+
+## Pilot reporting
+
+Battle reports aggregate only events recorded between the battle's start and end, keeping completed results stable when permanent matchup pages receive later visits. Reports derive unique visitors, seven-day return, verified-vote conversion, two-startup exploration, per-startup outbound traffic, signed founder referrals, suspicious-vote rate, and recorded operator interventions.
+
+Founder referral codes are HMAC-signed to bind a share link to one battle and one participating startup. Only the signed-in owner receives that startup's share control, and the event route verifies ownership again before recording a share. Founders see aggregate delivery for their own startups; battle-level fraud and intervention signals remain admin-only.

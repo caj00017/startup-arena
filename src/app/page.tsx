@@ -6,13 +6,18 @@ import { Countdown } from "@/components/countdown";
 import { ImpressionTracker } from "@/components/impression-tracker";
 import { StatusPill } from "@/components/ui";
 import { getAccountData, getActiveBattleData } from "@/db/queries";
+import { createFounderReferralCode, parseFounderReferralCode } from "@/lib/analytics";
 import { getCurrentUser } from "@/lib/auth";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const user = await getCurrentUser();
+export default async function Home({
+  searchParams
+}: {
+  searchParams: Promise<{ ref?: string | string[] }>;
+}) {
+  const [user, query] = await Promise.all([getCurrentUser(), searchParams]);
   const data = await getActiveBattleData(user?.id);
   const account = user ? await getAccountData(user.id) : null;
 
@@ -29,10 +34,31 @@ export default async function Home() {
   }
 
   const isLive = data.battle.status === "live" && data.battle.endsAt > new Date();
+  const referralCode = typeof query.ref === "string" ? query.ref : undefined;
+  const referral = parseFounderReferralCode(referralCode);
+  const acceptedReferralCode =
+    referral?.battleId === data.battle.id &&
+    [data.champion.id, data.challenger.id].includes(referral.startupId)
+      ? referralCode
+      : undefined;
+  const participantIds = new Set([data.champion.id, data.challenger.id]);
+  const founderReferralCodes = isLive
+    ? Object.fromEntries(
+        (account?.startups ?? [])
+          .filter((startup) => participantIds.has(startup.id))
+          .map((startup) => [
+            startup.id,
+            createFounderReferralCode(data.battle.id, startup.id)
+          ])
+      )
+    : {};
 
   return (
     <>
-      <ImpressionTracker battleId={data.battle.id} />
+      <ImpressionTracker
+        battleId={data.battle.id}
+        referralCode={acceptedReferralCode}
+      />
       <section className="paper-grid border-b border-[var(--line)]">
         <div className="mx-auto max-w-6xl px-5 pb-10 pt-12 text-center sm:pt-16">
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -64,6 +90,7 @@ export default async function Home() {
           signedIn={Boolean(user)}
           isLive={isLive}
           turnstileSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+          founderReferralCodes={founderReferralCodes}
         />
 
         {data.auction && (

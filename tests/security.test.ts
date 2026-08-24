@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveConfiguredRole } from "@/lib/auth";
+import { createFounderReferralCode, parseFounderReferralCode } from "@/lib/analytics";
 import { env, getProductionConfigurationErrors } from "@/lib/env";
 
 const configuredProduction = {
@@ -96,5 +97,21 @@ describe("configured administrator access", () => {
         ownsStartup: false
       })
     ).toBe("admin");
+  });
+});
+
+describe("founder referral attribution", () => {
+  const battleId = "03000000-0000-4000-8000-000000000001";
+  const startupId = "02000000-0000-4000-8000-000000000001";
+
+  it("accepts an untampered battle and startup referral code", () => {
+    const code = createFounderReferralCode(battleId, startupId);
+    expect(parseFounderReferralCode(code)).toEqual({ battleId, startupId });
+  });
+
+  it("rejects malformed and tampered referral codes", () => {
+    const code = createFounderReferralCode(battleId, startupId);
+    expect(parseFounderReferralCode(`${code}x`)).toBeNull();
+    expect(parseFounderReferralCode("not-a-referral")).toBeNull();
   });
 });
