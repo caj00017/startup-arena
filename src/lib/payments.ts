@@ -16,6 +16,20 @@ export function isMockPaymentMode() {
   return !env.STRIPE_SECRET_KEY;
 }
 
+export function buildPaymentSetupSessionParams(input: {
+  customerId: string;
+  userId: string;
+}): Stripe.Checkout.SessionCreateParams {
+  return {
+    mode: "setup",
+    currency: "usd",
+    customer: input.customerId,
+    success_url: `${env.NEXT_PUBLIC_APP_URL}/api/payments/setup/complete?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${env.NEXT_PUBLIC_APP_URL}/account?payment=cancelled`,
+    metadata: { arenaUserId: input.userId }
+  };
+}
+
 export async function createPaymentSetup(user: User) {
   const client = stripe();
 
@@ -47,13 +61,9 @@ export async function createPaymentSetup(user: User) {
       .where(eq(users.id, user.id));
   }
 
-  const session = await client.checkout.sessions.create({
-    mode: "setup",
-    customer: customerId,
-    success_url: `${env.NEXT_PUBLIC_APP_URL}/api/payments/setup/complete?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${env.NEXT_PUBLIC_APP_URL}/account?payment=cancelled`,
-    metadata: { arenaUserId: user.id }
-  });
+  const session = await client.checkout.sessions.create(
+    buildPaymentSetupSessionParams({ customerId, userId: user.id })
+  );
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
   return { url: session.url, mock: false as const };
