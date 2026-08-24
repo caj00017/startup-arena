@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
-import { auctions, battles, bids, events, startups, users, votes } from "./schema";
+import { auctions, battles, bids, startups, users, votes } from "./schema";
 import { buildLeaderboard } from "@/lib/leaderboard";
 
 async function startupMap(ids: string[]) {
@@ -186,15 +186,7 @@ export async function getAccountData(userId: string) {
         .orderBy(desc(bids.createdAt))
         .limit(20)
     : [];
-  const eventRows = startupIds.length
-    ? await db
-        .select({ startupId: events.startupId, type: events.eventType, total: count() })
-        .from(events)
-        .where(inArray(events.startupId, startupIds))
-        .groupBy(events.startupId, events.eventType)
-    : [];
-
-  return { startups: ownedStartups, bids: bidRows, events: eventRows };
+  return { startups: ownedStartups, bids: bidRows };
 }
 
 export async function getOwnedStartupIds(userId: string) {

@@ -35,6 +35,8 @@ PGlite uses the same PostgreSQL schema and Drizzle queries as production. It is 
 - `audit_logs` records consequential founder/admin/system mutations.
 - `webhook_events` makes Stripe webhook processing idempotent.
 
+Raw battle events, individual votes, and their keyed security hashes expire 30 days after a battle is finalized or cancelled; unassociated events expire 30 days after creation. The authenticated rollover cron runs the idempotent cleanup and also removes expired sessions and magic links. Durable battle totals, winners, chain fields, and leaderboard inputs remain, while bids, payment references, audit logs, and processed webhooks are deliberately outside this cleanup pending category-specific legal schedules.
+
 ## Battle state
 
 ```text

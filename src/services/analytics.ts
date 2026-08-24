@@ -23,6 +23,10 @@ import {
   type Vote
 } from "@/db/schema";
 import { isBattleLive } from "@/lib/domain";
+import {
+  battleRawDataExpiresAt,
+  isBattleRawDataAvailable
+} from "@/services/retention";
 
 type EventRow = typeof events.$inferSelect;
 
@@ -264,7 +268,7 @@ export function summarizeBattleAnalytics(input: {
   };
 }
 
-export async function getBattleReport(battleId: string) {
+export async function getBattleReport(battleId: string, now = new Date()) {
   const [battle] = await db
     .select()
     .from(battles)
@@ -272,11 +276,31 @@ export async function getBattleReport(battleId: string) {
     .limit(1);
   if (!battle) return null;
 
-  const [startupRows, eventRows, voteRows, auctionRows, priorRows] = await Promise.all([
-    db
-      .select()
-      .from(startups)
-      .where(inArray(startups.id, [battle.championStartupId, battle.challengerStartupId])),
+  const startupRows = await db
+    .select()
+    .from(startups)
+    .where(inArray(startups.id, [battle.championStartupId, battle.challengerStartupId]));
+  const startupById = new Map(startupRows.map((startup) => [startup.id, startup]));
+  const champion = startupById.get(battle.championStartupId);
+  const challenger = startupById.get(battle.challengerStartupId);
+  if (!champion || !challenger) return null;
+
+  const analyticsExpiresAt = battleRawDataExpiresAt(battle);
+  if (!isBattleRawDataAvailable(battle, now)) {
+    return {
+      ...summarizeBattleAnalytics({
+        battle,
+        champion,
+        challenger,
+        eventRows: [],
+        voteRows: []
+      }),
+      analyticsAvailable: false as const,
+      analyticsExpiresAt
+    };
+  }
+
+  const [eventRows, voteRows, auctionRows, priorRows] = await Promise.all([
     db
       .select()
       .from(events)
@@ -302,10 +326,6 @@ export async function getBattleReport(battleId: string) {
         )
       )
   ]);
-  const startupById = new Map(startupRows.map((startup) => [startup.id, startup]));
-  const champion = startupById.get(battle.championStartupId);
-  const challenger = startupById.get(battle.challengerStartupId);
-  if (!champion || !challenger) return null;
 
   const entityIds = [
     battle.id,
@@ -322,20 +342,24 @@ export async function getBattleReport(battleId: string) {
       )
     );
 
-  return summarizeBattleAnalytics({
-    battle,
-    champion,
-    challenger,
-    eventRows,
-    voteRows,
-    priorVisitorHashes: new Set(
-      priorRows.flatMap((row) => (row.sessionHash ? [row.sessionHash] : []))
-    ),
-    operationalInterventions: interventionRows.length
-  });
+  return {
+    ...summarizeBattleAnalytics({
+      battle,
+      champion,
+      challenger,
+      eventRows,
+      voteRows,
+      priorVisitorHashes: new Set(
+        priorRows.flatMap((row) => (row.sessionHash ? [row.sessionHash] : []))
+      ),
+      operationalInterventions: interventionRows.length
+    }),
+    analyticsAvailable: true as const,
+    analyticsExpiresAt
+  };
 }
 
-export async function getBattleReportList() {
+export async function getBattleReportList(now = new Date()) {
   const battleRows = await db
     .select()
     .from(battles)
@@ -358,11 +382,13 @@ export async function getBattleReportList() {
   return battleRows.map((battle) => ({
     battle,
     champion: startupById.get(battle.championStartupId)!,
-    challenger: startupById.get(battle.challengerStartupId)!
+    challenger: startupById.get(battle.challengerStartupId)!,
+    analyticsAvailable: isBattleRawDataAvailable(battle, now),
+    analyticsExpiresAt: battleRawDataExpiresAt(battle)
   }));
 }
 
-export async function getFounderBattleReports(userId: string) {
+export async function getFounderBattleReports(userId: string, now = new Date()) {
   const ownedStartups = await db
     .select()
     .from(startups)
@@ -381,9 +407,12 @@ export async function getFounderBattleReports(userId: string) {
     )
     .orderBy(desc(battles.startsAt))
     .limit(20);
-  if (battleRows.length === 0) return [];
+  const retainedBattleRows = battleRows.filter((battle) =>
+    isBattleRawDataAvailable(battle, now)
+  );
+  if (retainedBattleRows.length === 0) return [];
 
-  const battleIds = battleRows.map((battle) => battle.id);
+  const battleIds = retainedBattleRows.map((battle) => battle.id);
   const [participantRows, eventRows, voteRows] = await Promise.all([
     db
       .select()
@@ -391,7 +420,7 @@ export async function getFounderBattleReports(userId: string) {
       .where(
         inArray(
           startups.id,
-          battleRows.flatMap((battle) => [
+          retainedBattleRows.flatMap((battle) => [
             battle.championStartupId,
             battle.challengerStartupId
           ])
@@ -402,7 +431,7 @@ export async function getFounderBattleReports(userId: string) {
   ]);
   const startupById = new Map(participantRows.map((startup) => [startup.id, startup]));
 
-  return battleRows.flatMap((battle) => {
+  return retainedBattleRows.flatMap((battle) => {
     const champion = startupById.get(battle.championStartupId);
     const challenger = startupById.get(battle.challengerStartupId);
     if (!champion || !challenger) return [];

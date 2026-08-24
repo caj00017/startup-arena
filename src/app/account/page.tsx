@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, CreditCard, MousePointerClick, Share2, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, CreditCard, MousePointerClick, Share2, Trophy, Users } from "lucide-react";
 import { AccountActions } from "@/components/account-actions";
 import { StartupMark } from "@/components/startup-mark";
 import { LinkButton, StatusPill } from "@/components/ui";
-import { getAccountData } from "@/db/queries";
+import { getAccountData, getLeaderboardData } from "@/db/queries";
 import { requireUser } from "@/lib/auth";
+import { formatCrownTime } from "@/lib/leaderboard";
 import { formatMoney } from "@/lib/utils";
 import { getFounderBattleReports } from "@/services/analytics";
 
@@ -13,11 +14,14 @@ export const metadata = { title: "Account" };
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const [data, battleReports] = await Promise.all([
+  const [data, battleReports, leaderboard] = await Promise.all([
     getAccountData(user.id),
-    getFounderBattleReports(user.id)
+    getFounderBattleReports(user.id),
+    getLeaderboardData()
   ]);
-  const counts = new Map(data.events.map((row) => [`${row.startupId}:${row.type}`, Number(row.total)]));
+  const leaderboardByStartup = new Map(
+    leaderboard.map((entry) => [entry.startup.id, entry])
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 sm:py-16">
@@ -51,7 +55,12 @@ export default async function AccountPage() {
                 <p className="mt-1 text-sm text-[var(--muted)]">{startup.tagline}</p>
               </div>
               <div className="flex gap-5 text-sm">
-                <span className="flex items-center gap-1.5 font-bold"><MousePointerClick size={16} /> {counts.get(`${startup.id}:outbound_click`) || 0} clicks</span>
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Trophy size={16} />
+                  {leaderboardByStartup.has(startup.id)
+                    ? `${formatCrownTime(leaderboardByStartup.get(startup.id)!.crownTimeMs)} crown time`
+                    : "Not ranked yet"}
+                </span>
               </div>
             </article>
           )) : <div className="rounded-2xl border-2 border-dashed border-[var(--line)] p-10 text-center text-[var(--muted)]">No startup submitted yet.</div>}
@@ -61,7 +70,7 @@ export default async function AccountPage() {
       {battleReports.length > 0 && (
         <section className="mt-14">
           <h2 className="font-display text-4xl font-black tracking-[-0.04em]">Battle traffic</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">First-party totals for matchups featuring your startups.</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">First-party totals are available for 30 days after a matchup is finalized.</p>
           <div className="mt-5 grid gap-5">
             {battleReports.map((report) => (
               <article key={`${report.battle.id}:${report.startup.id}`} className="rounded-2xl border-2 border-[var(--foreground)] bg-[var(--paper)] p-5 shadow-hard-sm">

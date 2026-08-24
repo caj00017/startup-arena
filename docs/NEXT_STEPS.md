@@ -99,7 +99,7 @@ Unless stated otherwise, each battle report includes activity recorded from that
 | Operational interventions | Manual pause, moderation, fallback correction, or rollover recovery actions recorded for the battle |
 | Auction demand | Eligible bidders, valid bids, winning amount, payment result, and repeat bidding |
 
-The visitor identifier is random and first-party and is persisted server-side only as a keyed hash. It contains no email address, startup ID, raw IP address, or third-party advertising identifier. The 30-day raw-event working rule below must be reconciled with the final moderation, dispute, and legal policy before public traffic.
+The visitor identifier is random and first-party and is persisted server-side only as a keyed hash. It contains no email address, startup ID, raw IP address, or third-party advertising identifier. The approved 30-day raw-data rule below must still be reviewed against the final launch geography and legal policy before public traffic.
 
 ### Leaderboard contract
 
@@ -114,13 +114,13 @@ The public leaderboard contains every approved startup with at least one finaliz
 
 The leaderboard requires durable startup identity plus each battle's participant IDs, chain, scheduled interval, creation time, status, winner, final vote totals, streak-at-start, and finalization time. Those competition-ledger fields remain while Startup Arena operates and are not deleted with traffic analytics.
 
-### Raw analytics inventory and working retention rule
+### Raw analytics inventory and approved retention rule
 
 The current raw `events` rows record event type, time, optional battle/startup/user references, a keyed anonymous visitor hash where relevant, and minimal source metadata. Event types currently used are battle impressions, founder shares, signed referral visits, outbound startup clicks, vote attribution, and startup submission. The separate `votes` table stores the voter and battle choice plus keyed IP/user-agent hashes for abuse review. Neither data set is needed to calculate the leaderboard.
 
-The working product rule is to retain raw traffic events for **30 days after a battle ends**, or 30 days after creation when an event has no battle, and then delete them automatically. The eight-day browser visitor token remains unchanged. Individual vote and abuse-review records need a separately documented moderation/dispute cutoff before they can be reduced to the final vote totals already frozen on the battle. Auction, payment, tax, dispute, and security-audit records follow their own legally reviewed schedules and are not governed by the analytics window.
+The approved product rule is to retain raw traffic events and individual votes, including keyed abuse-review hashes, for **30 days after a battle is finalized or cancelled**, or 30 days after creation when an event has no battle, and then delete them automatically. The eight-day browser visitor token remains unchanged. Final vote totals and the winner are already frozen on the battle and remain durable. Auction, payment, tax, chargeback, dispute, security-audit, and processed-webhook records follow their own legally reviewed schedules and are not governed by the raw-data window.
 
-Before public launch, Codex must implement and rehearse the cleanup job, make report availability match the 30-day window, and update the privacy copy. The final policy remains subject to the approved launch geography and counsel review.
+The cleanup job is implemented after the authenticated scheduled rollover and also removes expired sessions and magic links. Founder reports disappear after the review window, while admin reports explicitly say the source data is no longer retained instead of displaying zeros. Startup cards now show durable crown time rather than a shrinking all-time click count. Automated coverage proves that cleanup preserves final scores, winners, battle history, audit/payment records, and leaderboard ordering. The policy and the broader open legal questions are tracked in `docs/LEGAL_LAUNCH_REGISTER.md` and remain subject to launch-geography and counsel review.
 
 ## 5. Chronological remaining work
 
@@ -150,7 +150,7 @@ Before public launch, Codex must implement and rehearse the cleanup job, make re
 1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
 2. Validate production configuration without exposing values.
 3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
-4. Add retention/cleanup for expired sessions, magic links, and 30-day raw analytics after the remaining moderation/dispute policy is approved.
+4. Deploy and rehearse the implemented retention cleanup for expired sessions, magic links, and 30-day raw traffic/vote data.
 5. Update the operations runbook with the chosen boundary, contacts, alert paths, and escalation steps.
 
 **Exit criteria**
@@ -168,7 +168,7 @@ Before public launch, Codex must implement and rehearse the cleanup job, make re
 
 - approve paid challenger placement as advertising and disclose the invited opening placements;
 - define when bids become binding and how refunds, cancellations, failures, chargebacks, and disputes work;
-- approve privacy, cookie/analytics, IP hashing, retention, deletion, and data-request language;
+- approve privacy, cookie/analytics, IP hashing, retention, deletion, and data-request language using `docs/LEGAL_LAUNCH_REGISTER.md` as the review packet;
 - define prohibited products, moderation appeals, founder representations, voting campaigns, and disqualification;
 - decide governing law, liability limits, indirect-tax handling, and required support disclosures;
 - define battle cancellation, replay, correction, and payment-dispute evidence procedures.
@@ -264,6 +264,6 @@ Do not respond to weak validation by adding categories, comments, Elo, tournamen
 
 ## 6. Immediate next actions
 
-1. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
+1. **Chris:** choose the production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap, then review the open decisions in `docs/LEGAL_LAUNCH_REGISTER.md` with qualified counsel/accounting support.
 2. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
 3. **Codex and Chris:** complete the production/legal gates and instrumented production rehearsal before enabling live Stripe.

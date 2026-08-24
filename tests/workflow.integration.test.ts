@@ -2,13 +2,14 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { getAdminData } from "@/db/queries";
+import { getAdminData, getBattleData, getLeaderboardData } from "@/db/queries";
 import { auditLogs, auctions, battles, bids, events, magicLinks, sessions, startups, users, votes } from "@/db/schema";
 import { claimMagicLinkAttempt, issueMagicLink, verifyMagicLinkToken } from "@/lib/auth";
 import { getBattleReport, getFounderBattleReports, recordBrowserEvent, recordOutboundClick } from "@/services/analytics";
 import { placeBid } from "@/services/auction";
 import { createInitialBattle, setAuctionPaused, setBattlePaused } from "@/services/admin";
 import { ensureNextBattle, finalizeBattle, runScheduledTransitions, settleAuction } from "@/services/rollover";
+import { runRetentionCleanup } from "@/services/retention";
 import { castVote } from "@/services/voting";
 
 const ids = {
@@ -281,6 +282,108 @@ describe("core v0.1 workflow", () => {
     expect(await db.select().from(battles).where(eq(battles.previousBattleId, ids.battle))).toHaveLength(1);
     const createdAudits = await db.select().from(auditLogs).where(eq(auditLogs.action, "battle.created"));
     expect(createdAudits).toHaveLength(1);
+  });
+
+  it("deletes expired raw and authentication data without changing the competition record", async () => {
+    const now = new Date("2026-08-24T12:00:00.000Z");
+    const oldBattleId = "03000000-0000-4000-8000-000000000098";
+    const oldFinalizedAt = new Date(now.getTime() - 30 * 86_400_000 - 1);
+
+    await db.insert(battles).values({
+      id: oldBattleId,
+      championStartupId: ids.champion,
+      challengerStartupId: ids.challenger,
+      startsAt: new Date(oldFinalizedAt.getTime() - 86_400_000),
+      endsAt: new Date(oldFinalizedAt.getTime() - 1_000),
+      status: "finalized",
+      winnerStartupId: ids.champion,
+      championVotes: 1,
+      challengerVotes: 0,
+      finalizedAt: oldFinalizedAt,
+      updatedAt: oldFinalizedAt
+    });
+    await db.insert(votes).values({
+      battleId: oldBattleId,
+      startupId: ids.champion,
+      userId: ids.voter,
+      ipHash: "expired-ip-hash",
+      userAgentHash: "expired-agent-hash"
+    });
+    await db.insert(events).values([
+      {
+        eventType: "battle_impression",
+        battleId: oldBattleId,
+        sessionHash: "expired-battle-visitor",
+        createdAt: new Date(oldFinalizedAt.getTime() - 60_000)
+      },
+      {
+        eventType: "startup_submission",
+        sessionHash: "expired-unassociated-visitor",
+        createdAt: new Date(now.getTime() - 30 * 86_400_000 - 1)
+      },
+      {
+        eventType: "startup_submission",
+        sessionHash: "retained-unassociated-visitor",
+        createdAt: new Date(now.getTime() - 29 * 86_400_000)
+      }
+    ]);
+    await db.insert(sessions).values([
+      {
+        userId: ids.voter,
+        tokenHash: "expired-session",
+        expiresAt: new Date(now.getTime() - 1)
+      },
+      {
+        userId: ids.voter,
+        tokenHash: "retained-session",
+        expiresAt: new Date(now.getTime() + 1)
+      }
+    ]);
+    await db.insert(magicLinks).values([
+      {
+        email: "expired@example.com",
+        tokenHash: "expired-link",
+        browserTokenHash: "expired-browser-link",
+        expiresAt: new Date(now.getTime() - 1)
+      },
+      {
+        email: "retained@example.com",
+        tokenHash: "retained-link",
+        browserTokenHash: "retained-browser-link",
+        expiresAt: new Date(now.getTime() + 1)
+      }
+    ]);
+    await db.insert(auditLogs).values({
+      action: "battle.finalized",
+      entityType: "battle",
+      entityId: oldBattleId
+    });
+
+    const leaderboardBefore = await getLeaderboardData(now);
+    const cleanup = await runRetentionCleanup(now);
+
+    expect(cleanup).toMatchObject({
+      sessions: 1,
+      magicLinks: 1,
+      events: 2,
+      votes: 1
+    });
+    expect(await db.select().from(sessions)).toHaveLength(1);
+    expect(await db.select().from(magicLinks)).toHaveLength(1);
+    expect(await db.select().from(events)).toHaveLength(1);
+    expect(await db.select().from(votes).where(eq(votes.battleId, oldBattleId))).toHaveLength(0);
+    expect(await db.select().from(battles).where(eq(battles.id, oldBattleId))).toHaveLength(1);
+    expect(await db.select().from(auditLogs).where(eq(auditLogs.entityId, oldBattleId))).toHaveLength(1);
+
+    const historicalBattle = await getBattleData(oldBattleId);
+    expect(historicalBattle).toMatchObject({ championVotes: 1, challengerVotes: 0 });
+    expect((await getBattleReport(oldBattleId, now))?.analyticsAvailable).toBe(false);
+    expect(
+      (await getFounderBattleReports(ids.championOwner, now)).some(
+        (report) => report.battle.id === oldBattleId
+      )
+    ).toBe(false);
+    expect(await getLeaderboardData(now)).toEqual(leaderboardBefore);
   });
 
   it("verifies once and atomically signs in only the requesting browser", async () => {

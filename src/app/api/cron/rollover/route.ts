@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { assertProductionSecrets, env } from "@/lib/env";
 import { secureEqual } from "@/lib/security";
 import { runScheduledTransitions } from "@/services/rollover";
+import { runRetentionCleanup } from "@/services/retention";
 
 async function run(request: Request) {
   assertProductionSecrets();
@@ -11,7 +12,8 @@ async function run(request: Request) {
     return NextResponse.json({ error: "Invalid cron credentials." }, { status: 401 });
   }
   const result = await runScheduledTransitions();
-  return NextResponse.json({ ok: true, result });
+  const retention = await runRetentionCleanup();
+  return NextResponse.json({ ok: true, result, retention });
 }
 
 export const GET = run;

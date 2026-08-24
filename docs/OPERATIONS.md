@@ -77,6 +77,10 @@ Authorization: Bearer <CRON_SECRET>
 
 The development seed uses a rolling 24-hour window so the demonstration is live immediately.
 
+The same authenticated invocation runs the idempotent retention cleanup after lifecycle transitions. It deletes expired login sessions and magic links, raw events and individual votes for battles finalized or cancelled at least 30 days earlier, and unassociated events at least 30 days old. It does not delete startups, battles, frozen final totals, auctions, bids, payment references, audit logs, or processed webhook IDs. The JSON response includes deletion counts under `retention`.
+
+Admin and founder traffic reports are available only during that 30-day review window. Afterward, the admin report is marked expired; the public final result and leaderboard remain. Financial, chargeback, tax, security-audit, backup, and provider-log schedules must be approved separately before live payments.
+
 ## Daily operator checklist
 
 - Review pending startups.
@@ -103,7 +107,7 @@ Run due transitions from `/admin/battle`. Finalization recounts valid votes and 
 
 ### Suspicious result
 
-Move suspicious votes to review or invalid in `/admin/moderation` before finalization. In v0.1, finalized results should be repaired directly by an operator only after documenting the incident; a dedicated post-finalization appeal workflow is not included.
+Move suspicious votes to review or invalid in `/admin/moderation` before finalization. Individual votes and keyed fraud fingerprints remain available for 30 days after finalization or cancellation, so route complaints to the monitored support address within that window. In v0.1, finalized results should be repaired directly by an operator only after documenting the incident; a dedicated post-finalization appeal workflow is not included. After the 30-day cleanup, a vote-level reconstruction is no longer possible.
 
 ### Cancelled paid battle
 
