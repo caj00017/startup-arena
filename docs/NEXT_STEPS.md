@@ -1,6 +1,6 @@
 # Startup Arena — Paid-First Launch Plan
 
-**Status:** Reporting deployed to staging; authenticated reconciliation is the next gate
+**Status:** Staging reporting gate passed; production foundation is next
 
 **Last reconciled:** August 24, 2026
 
@@ -16,13 +16,11 @@ The launch-blocking application hardening and real staging lifecycle rehearsal a
 - awarded, no-bid, wildcard, pause/resume, and operator-recovery paths;
 - automatic Vercel Cron rollover, overlapping transition requests, and settlement idempotency.
 
-Pilot analytics and referral reporting are implemented, pushed on `main`, and deployed to the stable staging URL. The deployment is healthy, admin reports remain authentication-protected, and a controlled anonymous visitor produced exactly one accepted battle impression plus the expected tracked outbound redirect. The signed founder-share, referred-visit, vote-attribution, and report reconciliation remain to be exercised through an authenticated browser session.
+Launch analytics and referral reporting are implemented, pushed on `main`, deployed, and reconciled on staging. The authenticated rehearsal moved unique visitors from 2 to 4, verified votes from 0 to 1, and explored-both visitors from 0 to 1. Each startup gained one outbound click, while the shared Bidder link gained one founder share, one unique referred visitor, and 100% referral vote conversion. Suspicious votes and operator interventions remained at zero. The extra two visitors are consistent with the signed-in owner opening the matchup to share it and a separate private visitor opening the referral.
 
 The remaining launch sequence is:
 
 ```text
-Deploy and rehearse reporting on staging
-        ↓
 Production domain, providers, monitoring, policies, and retention
         ↓
 Approve Nexura plus the invited opening challenger
@@ -103,25 +101,12 @@ The visitor identifier is random and first-party and is persisted server-side on
 
 ## 5. Chronological remaining work
 
-### Phase A — Deploy and validate launch reporting
+### Phase A — Deploy and validate launch reporting — complete
 
-**Codex**
-
-1. Generate the remaining controlled staging founder share, signed referral visit, second-startup click, and verified vote with Chris's authenticated browser session.
-2. Reconcile the admin battle report and founder summary against the controlled traffic.
-3. Confirm founders see only their own aggregate delivery data and admins see battle-level operational evidence.
-
-**Chris**
-
-1. Complete the short authenticated share/referral/vote rehearsal with Codex.
-2. Choose a raw analytics retention period and deletion-request policy.
-3. Review the first staging report for usefulness and clarity.
-
-**Exit criteria**
-
-- Controlled traffic appears exactly once per defined visitor denominator.
-- Signed referral attribution cannot be reassigned to another startup or battle.
-- No report exposes raw identifiers or security fingerprints.
+- Controlled anonymous and authenticated traffic reconciled against the admin report.
+- Owner-validated sharing, signed referral attribution, both-startup exploration, and verified-vote conversion behaved as defined.
+- Founder account totals remained aggregate-only, while the authentication-protected admin report exposed battle-level operational evidence without raw identifiers or security fingerprints.
+- Automated coverage continues to enforce battle/startup referral binding and owner-only share attribution.
 
 ### Phase B — Complete the production foundation
 
@@ -254,7 +239,6 @@ Do not respond to weak validation by adding categories, comments, Elo, tournamen
 
 ## 6. Immediate next actions
 
-1. **Codex and Chris:** complete the authenticated share/referral/vote sequence and reconcile the staging reports.
-2. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
-3. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
-4. **Codex and Chris:** complete production/legal gates and the instrumented production rehearsal before enabling live Stripe.
+1. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
+2. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
+3. **Codex and Chris:** complete the production/legal gates and instrumented production rehearsal before enabling live Stripe.
