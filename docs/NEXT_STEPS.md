@@ -1,6 +1,6 @@
 # Startup Arena — Paid-First Launch Plan
 
-**Status:** Staging lifecycle rehearsal complete; preparing a controlled paid launch
+**Status:** Reporting deployed to staging; authenticated reconciliation is the next gate
 
 **Last reconciled:** August 24, 2026
 
@@ -16,7 +16,7 @@ The launch-blocking application hardening and real staging lifecycle rehearsal a
 - awarded, no-bid, wildcard, pause/resume, and operator-recovery paths;
 - automatic Vercel Cron rollover, overlapping transition requests, and settlement idempotency.
 
-Pilot analytics and referral reporting are implemented and pushed on `main` as `5e198dd`. Deployment of that commit to staging is pending restored Vercel CLI authorization.
+Pilot analytics and referral reporting are implemented, pushed on `main`, and deployed to the stable staging URL. The deployment is healthy, admin reports remain authentication-protected, and a controlled anonymous visitor produced exactly one accepted battle impression plus the expected tracked outbound redirect. The signed founder-share, referred-visit, vote-attribution, and report reconciliation remain to be exercised through an authenticated browser session.
 
 The remaining launch sequence is:
 
@@ -107,14 +107,13 @@ The visitor identifier is random and first-party and is persisted server-side on
 
 **Codex**
 
-1. Deploy commit `5e198dd` to staging after Vercel CLI authorization is restored.
-2. Generate controlled staging impressions, a signed founder referral, a share, both startup clicks, and a verified vote.
-3. Reconcile the admin battle report and founder summary against the controlled traffic.
-4. Confirm founders see only their own aggregate delivery data and admins see battle-level operational evidence.
+1. Generate the remaining controlled staging founder share, signed referral visit, second-startup click, and verified vote with Chris's authenticated browser session.
+2. Reconcile the admin battle report and founder summary against the controlled traffic.
+3. Confirm founders see only their own aggregate delivery data and admins see battle-level operational evidence.
 
 **Chris**
 
-1. Restore Vercel CLI authorization without sharing credentials.
+1. Complete the short authenticated share/referral/vote rehearsal with Codex.
 2. Choose a raw analytics retention period and deletion-request policy.
 3. Review the first staging report for usefulness and clarity.
 
@@ -255,8 +254,7 @@ Do not respond to weak validation by adding categories, comments, Elo, tournamen
 
 ## 6. Immediate next actions
 
-1. **Chris:** restore the Vercel CLI session.
-2. **Codex:** deploy `5e198dd` to staging and reconcile the controlled reporting flow.
-3. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
-4. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
-5. **Codex and Chris:** complete production/legal gates and the instrumented production rehearsal before enabling live Stripe.
+1. **Codex and Chris:** complete the authenticated share/referral/vote sequence and reconcile the staging reports.
+2. **Chris:** choose analytics retention, production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap.
+3. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
+4. **Codex and Chris:** complete production/legal gates and the instrumented production rehearsal before enabling live Stripe.
