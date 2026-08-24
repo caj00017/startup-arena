@@ -5,6 +5,7 @@ import { ArrowRight, CreditCard, Gavel, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button, LinkButton, StatusPill, inputClass } from "./ui";
 import { Countdown } from "./countdown";
+import { auctionUnavailableMessage } from "@/lib/auction-status";
 import { formatMoney } from "@/lib/utils";
 
 type AuctionStartup = { id: string; name: string; status: string };
@@ -129,7 +130,7 @@ export function AuctionPanel({
                 </Button>
               </div>
             ) : (
-              <p className="font-bold text-white/70">This auction is settling. The next one opens with tomorrow’s battle.</p>
+              <p className="font-bold text-white/70">{auctionUnavailableMessage(auction.status)}</p>
             )}
             {isOpen && !capReached && <p className="text-xs font-bold text-white/55">Minimum valid bid: {formatMoney(minimum)}. Pilot maximum: {formatMoney(maximumBidCents)}. Winner pays their bid after the auction closes.</p>}
             {error && <p role="alert" className="text-sm font-bold text-[#ffb5a1]">{error}</p>}
