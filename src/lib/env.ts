@@ -34,6 +34,14 @@ function hasValidSenderAddress(value: string) {
   return z.string().email().safeParse(address).success;
 }
 
+function hasStripeSecretKeyShape(value: string) {
+  return /^(sk|rk)_(test|live)_/.test(value);
+}
+
+function hasStripeWebhookSecretShape(value: string) {
+  return value.startsWith("whsec_");
+}
+
 export function getProductionConfigurationErrors(current: Environment = env) {
   if (current.NODE_ENV !== "production") return [];
 
@@ -62,8 +70,23 @@ export function getProductionConfigurationErrors(current: Environment = env) {
   ) {
     errors.push("EMAIL_FROM must use a verified production sender");
   }
-  if (!current.STRIPE_SECRET_KEY) errors.push("STRIPE_SECRET_KEY is required");
-  if (!current.STRIPE_WEBHOOK_SECRET) errors.push("STRIPE_WEBHOOK_SECRET is required");
+  if (!current.STRIPE_SECRET_KEY) {
+    errors.push("STRIPE_SECRET_KEY is required");
+  } else if (!hasStripeSecretKeyShape(current.STRIPE_SECRET_KEY)) {
+    errors.push("STRIPE_SECRET_KEY must be a Stripe test or live secret key");
+  }
+  if (!current.STRIPE_WEBHOOK_SECRET) {
+    errors.push("STRIPE_WEBHOOK_SECRET is required");
+  } else if (!hasStripeWebhookSecretShape(current.STRIPE_WEBHOOK_SECRET)) {
+    errors.push("STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret");
+  }
+  if (
+    current.STRIPE_SECRET_KEY &&
+    current.TURNSTILE_SECRET_KEY &&
+    current.STRIPE_SECRET_KEY === current.TURNSTILE_SECRET_KEY
+  ) {
+    errors.push("Stripe and Turnstile secret keys must be different");
+  }
   if (!current.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
     errors.push("NEXT_PUBLIC_TURNSTILE_SITE_KEY is required");
   }

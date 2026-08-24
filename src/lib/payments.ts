@@ -30,6 +30,33 @@ export function buildPaymentSetupSessionParams(input: {
   };
 }
 
+export function paymentProviderErrorDetails(error: unknown) {
+  if (!error || typeof error !== "object") return { type: "unknown" };
+  const providerError = error as {
+    type?: unknown;
+    code?: unknown;
+    statusCode?: unknown;
+    requestId?: unknown;
+  };
+  return {
+    type: typeof providerError.type === "string" ? providerError.type : "unknown",
+    code: typeof providerError.code === "string" ? providerError.code : undefined,
+    statusCode:
+      typeof providerError.statusCode === "number" ? providerError.statusCode : undefined,
+    requestId:
+      typeof providerError.requestId === "string" ? providerError.requestId : undefined
+  };
+}
+
+export function paymentProviderFailureReason(error: unknown) {
+  const { type } = paymentProviderErrorDetails(error);
+  if (type === "StripeCardError") return "The payment method was declined.";
+  if (type === "StripeAuthenticationError") return "Stripe authentication failed.";
+  if (type === "StripePermissionError") return "Stripe permissions rejected the request.";
+  if (type === "StripeInvalidRequestError") return "Stripe rejected the payment request.";
+  return "The payment provider could not complete the request.";
+}
+
 export async function createPaymentSetup(user: User) {
   const client = stripe();
 
@@ -135,7 +162,7 @@ export async function captureWinningBid(bid: Bid, user: User) {
   } catch (error) {
     return {
       succeeded: false as const,
-      reason: error instanceof Error ? error.message : "Payment failed."
+      reason: paymentProviderFailureReason(error)
     };
   }
 }

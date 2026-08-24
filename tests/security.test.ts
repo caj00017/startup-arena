@@ -14,8 +14,8 @@ const configuredProduction = {
   IP_HASH_SECRET: "a-production-ip-hash-secret",
   RESEND_API_KEY: "re_test",
   EMAIL_FROM: "Startup Arena <hello@startup-arena.test>",
-  STRIPE_SECRET_KEY: "sk_test",
-  STRIPE_WEBHOOK_SECRET: "whsec_test",
+  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_WEBHOOK_SECRET: "whsec_example",
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: "turnstile-site",
   TURNSTILE_SECRET_KEY: "turnstile-secret"
 };
@@ -49,6 +49,24 @@ describe("production readiness", () => {
     });
 
     expect(errors).toContain("EMAIL_FROM must use a verified production sender");
+  });
+
+  it("rejects crossed or malformed payment-provider credentials", () => {
+    const crossedSecret = "0x4AAAAA-turnstile-secret";
+    const errors = getProductionConfigurationErrors({
+      ...configuredProduction,
+      STRIPE_SECRET_KEY: crossedSecret,
+      STRIPE_WEBHOOK_SECRET: "not-a-webhook-secret",
+      TURNSTILE_SECRET_KEY: crossedSecret
+    });
+
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        "STRIPE_SECRET_KEY must be a Stripe test or live secret key",
+        "STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret",
+        "Stripe and Turnstile secret keys must be different"
+      ])
+    );
   });
 });
 
