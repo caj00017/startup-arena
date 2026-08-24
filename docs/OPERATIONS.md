@@ -36,10 +36,10 @@ The application refuses to use embedded PGlite when `NODE_ENV=production`. Runti
 Set:
 
 ```text
-NEXT_PUBLIC_APP_URL=https://your-domain.example
+NEXT_PUBLIC_APP_URL=https://startuparena.io
 RESEND_API_KEY=...
-EMAIL_FROM=Startup Arena <hello@your-domain.example>
-ADMIN_EMAILS=founder@your-domain.example
+EMAIL_FROM=Startup Arena <approved-sender@startuparena.io>
+ADMIN_EMAILS=<approved production administrator address>
 ```
 
 Verify the sender domain with the email provider. Magic links expire after 15 minutes and can be used once. Test both same-device and cross-device verification; a link opened on a phone should complete and redirect the original requesting browser without creating a phone session.
@@ -49,7 +49,7 @@ Verify the sender domain with the email provider. Magic links expire after 15 mi
 Set the three Stripe variables in `.env.example`. Register this webhook URL in Stripe:
 
 ```text
-https://your-domain.example/api/payments/webhook
+https://startuparena.io/api/payments/webhook
 ```
 
 Subscribe to:
@@ -123,3 +123,13 @@ At minimum alert on:
 - payment failures during settlement;
 - no active battle;
 - auction or battle remaining in a transitional state for more than 15 minutes.
+
+## Traffic abuse and denial-of-service posture
+
+Vercel provides automated DDoS mitigation at the platform firewall. Before launch, open the production project's Firewall view, enable Bot Protection in log mode, subscribe the monitored mailbox to error/usage and available firewall alerts, and configure spend notifications. Keep Attack Challenge Mode as the documented temporary response to an active flood; it challenges legitimate visitors too, so do not leave it enabled routinely without evidence.
+
+Turnstile already protects sign-in, voting, and startup submission, and the application has account/IP voting limits plus authenticated payment-verified bidding. These controls protect business mutations but do not replace edge protection or control every analytics/click request.
+
+Post-launch hardening should add distributed application rate limits, starting with anonymous event/click capture and then authentication, votes, bids, submissions, and payment setup. Do not use in-memory counters in serverless functions. Establish limits from observed legitimate traffic, return `429` responses with retry guidance, exclude authenticated cron and verified Stripe webhook traffic from generic browser rules, and rehearse false-positive recovery.
+
+References: [Vercel Firewall](https://vercel.com/docs/vercel-firewall), [Vercel DDoS mitigation](https://vercel.com/docs/vercel-firewall/ddos-mitigation), [Vercel alerts](https://vercel.com/docs/alerts), and [Cloudflare Turnstile hostname management](https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/).

@@ -17,6 +17,17 @@ This is the single working record of the legal, privacy, payment, advertising, a
 - Vercel, Neon, Resend, Stripe, and Cloudflare are the currently planned production providers. Their contracts, data locations, subprocessors, security terms, and deletion behavior must be reviewed for the chosen launch geography.
 - The public leaderboard is based on durable final battle records. It does not require raw visitor analytics or individual votes.
 
+### Approved business defaults awaiting final implementation/legal validation
+
+- Canonical production domain: `https://startuparena.io`.
+- Initial launch scope: U.S. participants and USD. Counsel must approve the eligibility language and whether technical geographic enforcement is required; a marketing statement alone does not prevent access from elsewhere.
+- Minimum account age: 18. The final Terms, account flow, and enforcement still need to match this choice.
+- Daily boundary: 00:00 UTC; the auction closes at 23:00 UTC.
+- Maximum accepted bid: $250, with the existing $5 opening minimum and $1 increment.
+- Refund position: a winning payment is final once its battle is scheduled, except Startup Arena refunds a placement it cancels and does not deliver. Counsel must validate the complete cancellation, delay, replay, failure, and chargeback treatment.
+- Placement labels: “Paid challenger” for an auction-earned placement and “Invited opening placement” for Nexura and the first challenger. Wildcard/fallback placements must not be mislabeled as paid.
+- One monitored mailbox may initially receive support, privacy, moderation, dispute, accessibility, and operational alerts. The actual address and escalation owner remain to be configured.
+
 ## 2. Approved data-retention schedule
 
 | Record | Purpose | Approved or working period | What happens at expiry |
@@ -75,7 +86,7 @@ The FTC evaluates the overall impression and says native advertising disclosures
 
 ### Age and children
 
-- Choose and enforce an age rule. An 18+ account and bidding requirement is operationally simplest, but it is not yet an approved product decision.
+- Implement and enforce the approved 18+ account rule; have counsel approve the representation and any age-verification expectations.
 - Do not knowingly collect personal information from children under 13 without a COPPA review and the required parental notice/consent controls. Passive identifiers and public submissions can count as collection.
 - If teens may vote, counsel should review state privacy rules, public-record implications, marketing, and consent language.
 
@@ -132,12 +143,13 @@ The FTC evaluates the overall impression and says native advertising disclosures
 | Decision | Current state | Owner |
 |---|---|---|
 | Operating entity, legal name, address | Open | Chris/counsel |
-| Production domain and monitored support/privacy address | Open | Chris |
-| Launch countries/states and USD scope | Open; application assumes USD | Chris/counsel/accountant |
-| Minimum voter/founder age | Open | Chris/counsel |
+| Production domain | `startuparena.io` selected; Vercel/Porkbun configuration pending | Chris/Codex |
+| Monitored support/privacy/alert address | One-mailbox approach approved; actual address pending | Chris |
+| Launch countries/states and USD scope | U.S./USD approved as business default; eligibility/enforcement needs review | Chris/counsel/accountant |
+| Minimum voter/founder age | 18+ approved; implementation/legal wording pending | Chris/counsel/Codex |
 | Binding-bid moment and policy acceptance evidence | Open | Counsel/Codex |
-| Refund, cancellation, replay, correction, and chargeback policy | Open | Chris/counsel |
-| Paid and invited placement labels | “Paid challenger” / “Invited opening placement” proposed | Counsel/Codex |
+| Refund, cancellation, replay, correction, and chargeback policy | Cancellation-only refund default approved; edge cases need counsel | Chris/counsel |
+| Paid and invited placement labels | “Paid challenger” / “Invited opening placement” approved; implementation pending | Counsel/Codex |
 | Vote complaint and result-finality policy | 30-day evidence window approved; correction procedure open | Chris/counsel |
 | Account deletion and public-history treatment | Open | Counsel/Codex |
 | Financial/payment/tax retention | Open | Accountant/counsel |

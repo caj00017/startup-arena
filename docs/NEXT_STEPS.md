@@ -23,7 +23,7 @@ The public crown-time leaderboard is also implemented and deployed. Staging deri
 The remaining launch sequence is:
 
 ```text
-Production domain, providers, monitoring, policies, and retention
+Production domain, providers, monitoring, and final policies
         ↓
 Approve Nexura plus the invited opening challenger
         ↓
@@ -122,6 +122,14 @@ The approved product rule is to retain raw traffic events and individual votes, 
 
 The cleanup job is implemented after the authenticated scheduled rollover and also removes expired sessions and magic links. Founder reports disappear after the review window, while admin reports explicitly say the source data is no longer retained instead of displaying zeros. Startup cards now show durable crown time rather than a shrinking all-time click count. Automated coverage proves that cleanup preserves final scores, winners, battle history, audit/payment records, and leaderboard ordering. The policy and the broader open legal questions are tracked in `docs/LEGAL_LAUNCH_REGISTER.md` and remain subject to launch-geography and counsel review.
 
+### Launch security baseline and rate-limiting backlog
+
+Vercel applies automated DDoS mitigation to every deployment. Startup Arena also fails closed when Turnstile is absent on sign-in, voting, and startup submission; voting has per-account and keyed-IP abuse limits; bidding requires an authenticated approved founder with a verified payment method; and scheduled/admin endpoints require secrets or admin authentication.
+
+Before public traffic, configure the production project's Firewall traffic visibility and Bot Protection in log mode, subscribe the monitored destination to error/usage and firewall signals, confirm spend notifications, and document Attack Challenge Mode as the immediate response to an active bot flood. These edge protections are launch work, not deferred work.
+
+Revisit distributed application-level rate limiting after launch traffic establishes safe baselines. Prioritize `/api/events`, `/go/*`, `/api/auth/request-link`, `/api/votes`, `/api/bids`, and submission/payment mutations. Counters must use shared durable or edge state rather than per-instance memory, distinguish anonymous/IP/account/route keys as appropriate, return `429` with a retry window, preserve trusted cron/webhook access, and have tests for legitimate bursts and evasive bot patterns. Rate limiting supplements rather than replaces Vercel DDoS mitigation and Turnstile.
+
 ## 5. Chronological remaining work
 
 ### Phase A — Deploy and validate launch reporting — complete
@@ -135,15 +143,16 @@ The cleanup job is implemented after the authenticated scheduled rollover and al
 
 **Chris**
 
-1. Choose the production domain and configure DNS.
-2. Choose and publish a monitored support/dispute address.
-3. Choose an uptime/error alert destination.
-4. Decide the permanent UTC rollover boundary.
-5. Confirm the initial launch geography and currency; v0.1 currently assumes USD.
-6. Choose the initial maximum bid; the $250 staging setting is only a test ceiling.
-7. Upgrade the production Neon resource from Free to a suitable paid production plan.
+1. Configure the selected `startuparena.io` domain in Vercel and Porkbun DNS; it is not yet assigned to the production project.
+2. Choose and publish the single monitored support/dispute address on `startuparena.io`.
+3. Route uptime, error, usage, and firewall alerts to that monitored destination.
+4. Use the approved permanent 00:00 UTC rollover boundary.
+5. Launch for U.S. participants in USD, subject to counsel approving eligibility and any required enforcement.
+6. Configure the approved initial maximum bid of $250.
+7. Complete the in-progress upgrade of the production Neon resource from Free to a suitable paid production plan.
 8. Complete Stripe business, payout, support, statement, receipt, Radar, and live-webhook configuration.
 9. Restrict production project/provider access to the smallest necessary group.
+10. Enable the production firewall/bot-monitoring baseline and usage notifications described above.
 
 **Codex**
 
@@ -166,9 +175,9 @@ The cleanup job is implemented after the authenticated scheduled rollover and al
 
 **Chris with qualified counsel**
 
-- approve paid challenger placement as advertising and disclose the invited opening placements;
+- approve the selected “Paid challenger” and “Invited opening placement” disclosures;
 - define when bids become binding and how refunds, cancellations, failures, chargebacks, and disputes work;
-- approve privacy, cookie/analytics, IP hashing, retention, deletion, and data-request language using `docs/LEGAL_LAUNCH_REGISTER.md` as the review packet;
+- validate the U.S./USD, 18+, 00:00 UTC, $250-cap, cancellation-only refund, privacy, cookie/analytics, IP hashing, retention, deletion, and data-request choices using `docs/LEGAL_LAUNCH_REGISTER.md` as the review packet;
 - define prohibited products, moderation appeals, founder representations, voting campaigns, and disqualification;
 - decide governing law, liability limits, indirect-tax handling, and required support disclosures;
 - define battle cancellation, replay, correction, and payment-dispute evidence procedures.
@@ -264,6 +273,6 @@ Do not respond to weak validation by adding categories, comments, Elo, tournamen
 
 ## 6. Immediate next actions
 
-1. **Chris:** choose the production domain, monitoring/support destinations, UTC boundary, geography/currency, and initial bid cap, then review the open decisions in `docs/LEGAL_LAUNCH_REGISTER.md` with qualified counsel/accounting support.
+1. **Chris:** finish the production Neon upgrade, create the monitored `startuparena.io` support/alert mailbox, and review the accepted launch defaults plus remaining open decisions in `docs/LEGAL_LAUNCH_REGISTER.md` with qualified counsel/accounting support.
 2. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
 3. **Codex and Chris:** complete the production/legal gates and instrumented production rehearsal before enabling live Stripe.
