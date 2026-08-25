@@ -36,7 +36,7 @@ Controlled paid launch
 Evidence review after the first 7–14 days
 ```
 
-No live payment should be accepted until Chris explicitly authorizes it after the readiness review. The production Neon resource must be upgraded from Free to a suitable paid production plan before public traffic begins.
+No live payment should be accepted until Chris explicitly authorizes it after the readiness review. The shared Vercel-managed Neon organization is now on the paid Launch plan, satisfying the production database plan gate.
 
 ## 2. Opening lineup and marketplace continuity
 
@@ -143,20 +143,20 @@ Revisit distributed application-level rate limiting after launch traffic establi
 
 **Chris**
 
-1. Configure the selected `startuparena.io` domain in Vercel and Porkbun DNS; it is not yet assigned to the production project.
-2. Choose and publish the single monitored support/dispute address on `startuparena.io`.
+1. Completed: `startuparena.io` and `www.startuparena.io` are assigned to `startup-arena-prod`, verified through Porkbun DNS, covered by renewable TLS, and canonicalized to the apex domain.
+2. Completed: `support@startuparena.io` forwards through Porkbun to the monitored operator inbox and passed an inbound test.
 3. Route uptime, error, usage, and firewall alerts to that monitored destination.
 4. Use the approved permanent 00:00 UTC rollover boundary.
 5. Launch for U.S. participants in USD, subject to counsel approving eligibility and any required enforcement.
 6. Configure the approved initial maximum bid of $250.
-7. Complete the in-progress upgrade of the production Neon resource from Free to a suitable paid production plan.
+7. Completed: the shared Vercel-managed Neon organization is on the paid Launch plan; production and staging retain separate databases.
 8. Complete Stripe business, payout, support, statement, receipt, Radar, and live-webhook configuration.
 9. Restrict production project/provider access to the smallest necessary group.
 10. Enable the production firewall/bot-monitoring baseline and usage notifications described above.
 
 **Codex**
 
-1. Connect the approved domain to `startup-arena-prod` and verify canonical URLs.
+1. Completed: connect the approved domain to `startup-arena-prod`, verify DNS and TLS, and redirect `www` permanently to the canonical apex while preserving path and query.
 2. Validate production configuration without exposing values.
 3. Wire health, rollover, webhook, payment-failure, and no-active-battle signals into the selected monitoring destination.
 4. Retention cleanup is deployed and its authenticated scheduled staging invocation passed; reconcile provider backup/log roll-off when the remaining category-specific legal schedules are approved.
@@ -273,6 +273,6 @@ Do not respond to weak validation by adding categories, comments, Elo, tournamen
 
 ## 6. Immediate next actions
 
-1. **Chris:** finish the production Neon upgrade, create the monitored `startuparena.io` support/alert mailbox, and review the accepted launch defaults plus remaining open decisions in `docs/LEGAL_LAUNCH_REGISTER.md` with qualified counsel/accounting support.
+1. **Codex and Chris:** configure the remaining production providers and application secrets, keeping Stripe in test mode through the production rehearsal; route available operational notifications to `support@startuparena.io`.
 2. **Chris:** invite the opening challenger founder and identify a third eligible fallback startup for day-two continuity.
 3. **Codex and Chris:** complete the production/legal gates and instrumented production rehearsal before enabling live Stripe.
